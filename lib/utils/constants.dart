@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary Colors
-  static const Color primary = Color(0xFF043461);
+  static const Color primary = Color(0xFF1976D2);
   static const Color primaryLight = Color(0xFF1A4B73);
   static const Color primaryDark = Color(0xFF032A52);
-  static const Color primaryButton = Color(0xFF5B8BB8);
+  static const Color primaryButton = Color(
+    0xFF5B8BB8,
+  ); // warna solid tombol keluar
 
   // Background Colors
-  static const Color backgroundLight = Color(0xFFF1EFEF);
+  static const Color backgroundLight = Color(0xFFF6F6F6);
   static const Color backgroundWhite = Color(0xFFFFFFFF);
   static const Color backgroundCard = Color(0xFFFAFAFA);
 
@@ -83,7 +85,11 @@ class AppColors {
   static const Color appBarText = textWhite;
 
   // Bottom Navigation Colors
-  static const Color bottomNavBackground = primary;
+  static const Color bottomNavBackground = primaryButton;
   static const Color bottomNavSelected = textWhite;
-  static const Color bottomNavUnselected = Color(0xB3FFFFFF);
+  static const Color bottomNavUnselected = textWhite;
+
+  // Dashboard Colors
+  static const Color dashboardPrimary =
+      primary; // sama persis dengan logo perisai
 }

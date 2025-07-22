@@ -5,6 +5,8 @@ import '../../widgets/custom_button.dart';
 import '../../providers/auth_provider.dart';
 import 'login_page.dart';
 import 'verification_page.dart';
+import 'package:another_flushbar/flushbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -79,6 +81,21 @@ class _RegisterPageState extends State<RegisterPage>
     _topController.dispose();
     _formController.dispose();
     super.dispose();
+  }
+
+  void _showFlushBar(String message, {bool isError = false}) {
+    Flushbar(
+      message: message,
+      backgroundColor: isError ? Colors.red : Colors.green,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(8),
+      borderRadius: BorderRadius.circular(8),
+      flushbarPosition: FlushbarPosition.TOP,
+      icon: Icon(
+        isError ? Icons.error : Icons.check_circle,
+        color: Colors.white,
+      ),
+    ).show(context);
   }
 
   @override
@@ -234,61 +251,41 @@ class _RegisterPageState extends State<RegisterPage>
                                 onPressed: () async {
                                   // Validasi input
                                   if (emailController.text.trim().isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Email tidak boleh kosong!',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    _showFlushBar(
+                                      'Email tidak boleh kosong!',
+                                      isError: true,
                                     );
                                     return;
                                   }
 
                                   if (nameController.text.trim().isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Nama tidak boleh kosong!',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    _showFlushBar(
+                                      'Nama tidak boleh kosong!',
+                                      isError: true,
                                     );
                                     return;
                                   }
 
                                   if (passwordController.text.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Password tidak boleh kosong!',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    _showFlushBar(
+                                      'Password tidak boleh kosong!',
+                                      isError: true,
                                     );
                                     return;
                                   }
 
                                   if (phoneController.text.trim().isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Nomor telepon tidak boleh kosong!',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    _showFlushBar(
+                                      'Nomor telepon tidak boleh kosong!',
+                                      isError: true,
                                     );
                                     return;
                                   }
 
                                   if (passwordController.text.length < 6) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Password minimal 6 karakter!',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    _showFlushBar(
+                                      'Password minimal 6 karakter!',
+                                      isError: true,
                                     );
                                     return;
                                   }
@@ -320,14 +317,26 @@ class _RegisterPageState extends State<RegisterPage>
                                     Navigator.of(context).pop();
 
                                     // Tampilkan notifikasi sukses
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Registrasi berhasil! OTP dikirim ke email.',
-                                        ),
-                                        backgroundColor: Colors.green,
-                                        duration: Duration(seconds: 2),
-                                      ),
+                                    _showFlushBar(
+                                      'Registrasi berhasil! OTP dikirim ke email.',
+                                      isError: false,
+                                    );
+
+                                    // Delay agar pesan sukses bisa terbaca user
+                                    await Future.delayed(
+                                      const Duration(milliseconds: 1500),
+                                    );
+
+                                    // Simpan status pending verifikasi ke SharedPreferences
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.setString(
+                                      'pending_verification_email',
+                                      emailController.text.trim(),
+                                    );
+                                    await prefs.setString(
+                                      'pending_verification_type',
+                                      'register',
                                     );
 
                                     // Navigasi ke halaman verifikasi dengan data email
@@ -336,6 +345,7 @@ class _RegisterPageState extends State<RegisterPage>
                                       MaterialPageRoute(
                                         builder: (context) => VerificationPage(
                                           email: emailController.text.trim(),
+                                          type: 'register',
                                         ),
                                       ),
                                     );
@@ -356,13 +366,7 @@ class _RegisterPageState extends State<RegisterPage>
                                           "Tidak bisa terhubung ke server!";
                                     }
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(errorMessage),
-                                        backgroundColor: Colors.red,
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
+                                    _showFlushBar(errorMessage, isError: true);
                                   }
                                 },
                               ),

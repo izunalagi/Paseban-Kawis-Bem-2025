@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../utils/constants.dart';
-import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:another_flushbar/flushbar.dart';
 
-class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+class ProfilDashboard extends StatefulWidget {
+  const ProfilDashboard({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<ProfilDashboard> createState() => _ProfilDashboardState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
-  final int _selectedIndex = 2;
-
+class _ProfilDashboardState extends State<ProfilDashboard> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -35,7 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Tutup dialog
+                Navigator.of(dialogContext).pop();
               },
               child: const Text(
                 'Batal',
@@ -47,7 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(context).pop(); // Tutup dialog
+                Navigator.of(dialogContext).pop();
                 await _performLogout();
               },
               style: ElevatedButton.styleFrom(
@@ -72,7 +69,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _performLogout() async {
     try {
-      // Tampilkan loading
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -80,13 +76,8 @@ class _ProfilePageState extends State<ProfilePage> {
           return const Center(child: CircularProgressIndicator());
         },
       );
-
-      // Lakukan logout
       await Provider.of<AuthProvider>(context, listen: false).logout();
-
-      // Tutup loading
       Navigator.of(context).pop();
-
       // Tampilkan notifikasi sukses dari atas
       Flushbar(
         message: 'Logout berhasil!',
@@ -97,19 +88,12 @@ class _ProfilePageState extends State<ProfilePage> {
         flushbarPosition: FlushbarPosition.TOP,
         icon: const Icon(Icons.check_circle, color: Colors.white),
       ).show(context);
-
-      // Navigasi ke splash screen
       await Future.delayed(const Duration(milliseconds: 1500));
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/splash',
-        (route) => false, // Hapus semua route sebelumnya
-      );
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/splash', (route) => false);
+      }
     } catch (e) {
-      // Tutup loading
       Navigator.of(context).pop();
-
-      // Tampilkan error dari atas
       Flushbar(
         message: 'Logout gagal: $e',
         backgroundColor: Colors.red,
@@ -124,76 +108,75 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Profil',
-        backgroundColor: AppColors.primaryButton,
-      ),
-      backgroundColor: AppColors.backgroundWhite,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: Colors.grey[300],
-              backgroundImage: AssetImage(
-                'assets/profile_placeholder.png',
-              ), // Ganti jika ada foto user
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Izuna Aja',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+    // Dummy data, bisa diganti dengan data user dari provider
+    final user = Provider.of<AuthProvider>(context).user;
+    return Container(
+      color: AppColors.backgroundLight,
+      width: double.infinity,
+      height: double.infinity,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 24),
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: AssetImage('assets/profile_placeholder.png'),
               ),
-            ),
-            const Text(
-              'izunaaja@gmail.com',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 24),
-            _buildProfileTile(
-              icon: Icons.edit,
-              iconColor: AppColors.primaryButton,
-              title: 'Edit Profil',
-              subtitle: 'Tekan untuk edit profil',
-              onTap: () {
-                // TODO: Navigate to Edit Profile
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildProfileTile(
-              icon: Icons.phone_android,
-              iconColor: AppColors.primaryButton,
-              title: 'Nomor Telepon',
-              subtitle: '081216519331',
-              showTrailing: false,
-            ),
-            const SizedBox(height: 8),
-            _buildProfileTile(
-              icon: Icons.description,
-              iconColor: AppColors.primaryButton,
-              title: 'Syarat dan Ketentuan',
-              subtitle: 'Tekan untuk melihat syarat dan ketentuan',
-              onTap: () {
-                // TODO: Navigate to terms page
-              },
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: CustomButton(
-                label: 'Keluar',
-                onPressed: _showLogoutDialog,
-                backgroundColor: AppColors.primaryButton,
+              const SizedBox(height: 12),
+              Text(
+                user?.nama ?? 'Admin',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              Text(
+                user?.email ?? '-',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildProfileTile(
+                icon: Icons.edit,
+                iconColor: AppColors.dashboardPrimary,
+                title: 'Edit Profil',
+                subtitle: 'Tekan untuk edit profil',
+                onTap: () {},
+              ),
+              const SizedBox(height: 8),
+              _buildProfileTile(
+                icon: Icons.phone_android,
+                iconColor: AppColors.dashboardPrimary,
+                title: 'Nomor Telepon',
+                subtitle: user?.telepon ?? '-',
+                showTrailing: false,
+              ),
+              const SizedBox(height: 8),
+              _buildProfileTile(
+                icon: Icons.description,
+                iconColor: AppColors.dashboardPrimary,
+                title: 'Syarat dan Ketentuan',
+                subtitle: 'Tekan untuk melihat syarat dan ketentuan',
+                onTap: () {},
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: CustomButton(
+                  label: 'Keluar',
+                  onPressed: _showLogoutDialog,
+                  backgroundColor: AppColors.dashboardPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

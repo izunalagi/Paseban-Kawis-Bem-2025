@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
 import 'register_page.dart';
+import 'forgot_password_page.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import 'package:another_flushbar/flushbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'verification_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -77,26 +81,31 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        duration: Duration(seconds: isError ? 3 : 2),
+  void _showFlushBar(String message, {bool isError = false}) {
+    Flushbar(
+      message: message,
+      backgroundColor: isError ? Colors.red : Colors.green,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(8),
+      borderRadius: BorderRadius.circular(8),
+      flushbarPosition: FlushbarPosition.TOP, // muncul dari atas
+      icon: Icon(
+        isError ? Icons.error : Icons.check_circle,
+        color: Colors.white,
       ),
-    );
+    ).show(context);
   }
 
   bool _validateInputs() {
     // Validasi email kosong
     if (emailController.text.trim().isEmpty) {
-      _showSnackBar('Email tidak boleh kosong!', isError: true);
+      _showFlushBar('Email tidak boleh kosong!', isError: true);
       return false;
     }
 
     // Validasi password kosong
     if (passwordController.text.isEmpty) {
-      _showSnackBar('Password tidak boleh kosong!', isError: true);
+      _showFlushBar('Password tidak boleh kosong!', isError: true);
       return false;
     }
 
@@ -104,7 +113,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     if (!RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     ).hasMatch(emailController.text.trim())) {
-      _showSnackBar('Format email tidak valid!', isError: true);
+      _showFlushBar('Format email tidak valid!', isError: true);
       return false;
     }
 
@@ -122,7 +131,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     });
 
     try {
-      print("🔄 Mencoba login dengan email: ${emailController.text}");
+      print("🔄 Mencoba login dengan email: " + emailController.text);
 
       await Provider.of<AuthProvider>(
         context,
@@ -130,7 +139,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       ).login(emailController.text.trim(), passwordController.text);
 
       print("✅ Login berhasil!");
-      _showSnackBar('Login berhasil!');
+      _showFlushBar('Login berhasil!');
 
       final roleId = Provider.of<AuthProvider>(context, listen: false).roleId;
 
@@ -148,7 +157,30 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       print("❌ Login error: $e");
 
       String errorMessage = "Login gagal!";
-      if (e.toString().contains("401")) {
+      if (e.toString().contains("EMAIL_NOT_VERIFIED")) {
+        errorMessage = "Akun belum diverifikasi!";
+        _showFlushBar(errorMessage, isError: true);
+        // Simpan pending verifikasi agar splash bisa redirect
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'pending_verification_email',
+          emailController.text.trim(),
+        );
+        await prefs.setString('pending_verification_type', 'register');
+        // Delay agar user baca pesan
+        await Future.delayed(const Duration(milliseconds: 1500));
+        // Redirect ke halaman verifikasi
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerificationPage(
+              email: emailController.text.trim(),
+              type: 'register',
+            ),
+          ),
+        );
+        return;
+      } else if (e.toString().contains("401")) {
         errorMessage = "Email atau password salah!";
       } else if (e.toString().contains("Connection")) {
         errorMessage = "Tidak bisa terhubung ke server!";
@@ -158,7 +190,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         errorMessage = "Tidak bisa terhubung ke server!";
       }
 
-      _showSnackBar(errorMessage, isError: true);
+      _showFlushBar(errorMessage, isError: true);
     }
 
     setState(() {
@@ -289,7 +321,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ForgotPasswordPage(),
+                                    ),
+                                  );
+                                },
                                 child: const Text(
                                   "Lupa Kata Sandi?",
                                   style: TextStyle(color: Colors.grey),

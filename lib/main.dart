@@ -7,6 +7,8 @@ import 'pages/autentikasi/register_page.dart';
 import 'pages/autentikasi/verification_page.dart';
 import 'pages/homepage/main_navigation.dart';
 import 'providers/auth_provider.dart';
+import 'pages/autentikasi/reset_password._page.dart';
+import 'pages/dashboard/main_navigation_dashboard.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,9 +30,9 @@ class MyApp extends StatelessWidget {
           '/': (context) => const MainNavigation(),
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
-          '/verifikasi': (context) => const VerificationPage(),
-          '/admin/dashboard': (context) => const AdminDashboard(),
+          '/admin/dashboard': (context) => const MainNavigationDashboard(),
           '/splash': (context) => const SplashPage(),
+          '/reset-password': (context) => const ResetPasswordPage(),
         },
       ),
     );

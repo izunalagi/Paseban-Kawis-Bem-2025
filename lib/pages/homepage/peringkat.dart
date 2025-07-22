@@ -40,7 +40,10 @@ class _PeringkatPageState extends State<PeringkatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
-      appBar: const CustomAppBar(title: 'Peringkat'),
+      appBar: const CustomAppBar(
+        title: 'Peringkat',
+        backgroundColor: AppColors.primaryButton,
+      ),
       body: Column(
         children: [
           Container(

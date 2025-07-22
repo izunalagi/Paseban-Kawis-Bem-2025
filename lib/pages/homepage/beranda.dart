@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom__button_nav.dart';
+// import '../../widgets/custom__button_nav.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,7 +17,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
-      appBar: const CustomAppBar(title: 'Hai, Izuna'),
+      appBar: const CustomAppBar(
+        title: 'Hai, Izuna',
+        backgroundColor: AppColors.primaryButton,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

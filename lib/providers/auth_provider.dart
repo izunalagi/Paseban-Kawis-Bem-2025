@@ -9,6 +9,11 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     final data = await AuthService().login(email, password);
+    // Cek verifikasi email, kecuali admin (role_id == 1)
+    if ((data['user']['role_id'] ?? 2) != 1 &&
+        data['user']['email_verified_at'] == null) {
+      throw Exception('EMAIL_NOT_VERIFIED');
+    }
     user = UserModel.fromJson(data['user']);
     token = data['token'];
     // roleId bisa diambil dari user jika ada
@@ -31,6 +36,27 @@ class AuthProvider with ChangeNotifier {
     return data;
   }
 
+  Future<Map<String, dynamic>> verifyForgotOtp(
+    String email,
+    String kodeOtp,
+  ) async {
+    final data = await AuthService().verifyForgotOtp(email, kodeOtp);
+    return data;
+  }
+
+  Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String password,
+    String passwordConfirmation,
+  ) async {
+    final data = await AuthService().resetPassword(
+      email,
+      password,
+      passwordConfirmation,
+    );
+    return data;
+  }
+
   Future<void> logout() async {
     await AuthService().logout();
     user = null;
@@ -44,11 +70,22 @@ class AuthProvider with ChangeNotifier {
       final userData = await AuthService().getUser();
       if (userData != null) {
         user = UserModel.fromJson(userData);
-        roleId = userData['role_id'] ?? 2;
+        // Ambil token dan role_id dari SharedPreferences
+        token = await AuthService().getToken();
+        roleId = await AuthService().getRoleId() ?? userData['role_id'] ?? 2;
         notifyListeners();
         return true;
       }
     }
     return false;
+  }
+
+  Future<void> forgotPassword(String email) async {
+    final response = await AuthService().forgotPassword(email);
+    // Tidak perlu return apa-apa, error akan dilempar jika gagal
+  }
+
+  Future<void> resendRegisterOtp(String email) async {
+    await AuthService().resendRegisterOtp(email);
   }
 }
