@@ -3,7 +3,7 @@ import '../utils/constants.dart';
 
 class CustomButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color? backgroundColor;
 
   const CustomButton({
@@ -24,6 +24,10 @@ class CustomButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          // Add disabled color
+          disabledBackgroundColor: (backgroundColor ?? AppColors.primaryButton)
+              .withOpacity(0.6),
+          disabledForegroundColor: Colors.white70,
         ),
         onPressed: onPressed,
         child: Text(
