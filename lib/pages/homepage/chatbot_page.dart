@@ -29,9 +29,25 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   Future<void> _initializeChat() async {
+    final token = context.read<AuthProvider>().token ?? '';
     final chatProvider = context.read<ChatProvider>();
-    if (chatProvider.currentSession == null && !chatProvider.isLoading) {
-      await _startNewSession();
+
+    try {
+      // Initialize chat provider (load sessions dan current session history)
+      await chatProvider.initializeChat(token);
+
+      // Jika tidak ada current session, buat session baru
+      if (chatProvider.currentSession == null && !chatProvider.isLoading) {
+        await _startNewSession();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text('Gagal menginisialisasi chat: $e')),
+          );
+      }
     }
   }
 
@@ -94,12 +110,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
         );
       });
     }
-  }
-
-  String _getPreviewText(String text) {
-    final words = text.trim().split(' ');
-    if (words.length <= 5) return text;
-    return '${words.take(5).join(' ')}...';
   }
 
   @override
@@ -253,14 +263,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
                           child: ListView.builder(
                             itemCount: chatProvider.sessionPreviews.length,
                             itemBuilder: (context, index) {
-                              final sessionId = chatProvider
-                                  .sessionPreviews
-                                  .keys
-                                  .elementAt(index);
-                              final preview =
-                                  chatProvider.sessionPreviews[sessionId] ?? '';
+                              final sessionPreview =
+                                  chatProvider.sessionPreviews[index];
                               final isActive =
-                                  sessionId == chatProvider.currentSession?.id;
+                                  sessionPreview.id ==
+                                  chatProvider.currentSession?.id;
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -275,7 +282,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                                 ),
                                 child: ListTile(
                                   title: Text(
-                                    _getPreviewText(preview),
+                                    sessionPreview.previewText,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -287,9 +294,20 @@ class _ChatbotPageState extends State<ChatbotPage> {
                                           : FontWeight.normal,
                                     ),
                                   ),
+                                  subtitle: sessionPreview.createdAt != null
+                                      ? Text(
+                                          _formatDate(
+                                            sessionPreview.createdAt!,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        )
+                                      : null,
                                   onTap: () {
                                     Navigator.pop(context);
-                                    _switchSession(sessionId);
+                                    _switchSession(sessionPreview.id);
                                   },
                                 ),
                               );
@@ -330,6 +348,20 @@ class _ChatbotPageState extends State<ChatbotPage> {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate = DateTime(date.year, date.month, date.day);
+
+    if (messageDate == today) {
+      return 'Hari ini ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (messageDate == today.subtract(const Duration(days: 1))) {
+      return 'Kemarin ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 
   Widget _buildInputSection() {

@@ -9,37 +9,60 @@ class ChatProvider extends ChangeNotifier {
   ChatSession? _currentSession;
   List<ChatMessage> _messages = [];
   bool _isLoading = false;
-  Map<String, String> _sessionPreviews = {};
-  static const String _prefsKeyPreviews = 'chat_session_previews';
+  List<ChatSessionPreview> _sessionPreviews = [];
+  static const String _prefsKeyCurrentSession = 'current_chat_session';
 
   ChatSession? get currentSession => _currentSession;
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
-  Map<String, String> get sessionPreviews => _sessionPreviews;
+  List<ChatSessionPreview> get sessionPreviews => _sessionPreviews;
 
-  ChatProvider() {
-    _loadStoredPreviews();
+  // Getter untuk compatibility dengan kode lama
+  Map<String, String> get sessionPreviewsMap {
+    final Map<String, String> map = {};
+    for (final preview in _sessionPreviews) {
+      map[preview.id] = preview.previewText;
+    }
+    return map;
   }
 
-  Future<void> _loadStoredPreviews() async {
+  ChatProvider() {
+    _loadCurrentSession();
+  }
+
+  Future<void> _loadCurrentSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final storedPreviews = prefs.getString(_prefsKeyPreviews);
-      if (storedPreviews != null) {
-        _sessionPreviews = Map<String, String>.from(jsonDecode(storedPreviews));
-        notifyListeners();
+      final sessionId = prefs.getString(_prefsKeyCurrentSession);
+      if (sessionId != null) {
+        _currentSession = ChatSession(id: sessionId);
       }
     } catch (e) {
-      debugPrint('Error loading stored previews: $e');
+      debugPrint('Error loading current session: $e');
     }
   }
 
-  Future<void> _saveStoredPreviews() async {
+  Future<void> _saveCurrentSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefsKeyPreviews, jsonEncode(_sessionPreviews));
+      if (_currentSession != null) {
+        await prefs.setString(_prefsKeyCurrentSession, _currentSession!.id);
+      } else {
+        await prefs.remove(_prefsKeyCurrentSession);
+      }
     } catch (e) {
-      debugPrint('Error saving stored previews: $e');
+      debugPrint('Error saving current session: $e');
+    }
+  }
+
+  // Load semua sessions dari server
+  Future<void> loadAllSessions(String token) async {
+    try {
+      _sessionPreviews = await _chatService.getAllSessions(token);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading all sessions: $e');
+      // Tidak throw error agar UI tidak crash
     }
   }
 
@@ -52,10 +75,15 @@ class ChatProvider extends ChangeNotifier {
     try {
       _currentSession = await _chatService.startSession(token);
       _messages = [];
+      await _saveCurrentSession();
+
+      // Reload sessions setelah membuat session baru
+      await loadAllSessions(token);
+
       notifyListeners();
     } catch (e) {
       debugPrint('Error starting session: $e');
-      rethrow; // Let UI handle the error
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -71,14 +99,11 @@ class ChatProvider extends ChangeNotifier {
     try {
       await _chatService.sendMessage(token, _currentSession!.id, message);
 
-      // Store first message as preview
-      if (!_sessionPreviews.containsKey(_currentSession!.id)) {
-        _sessionPreviews[_currentSession!.id] = message;
-        await _saveStoredPreviews();
-      }
-
       // Load updated chat history
       await loadChatHistory(token);
+
+      // Reload sessions untuk update preview
+      await loadAllSessions(token);
     } catch (e) {
       debugPrint('Error sending message: $e');
       rethrow;
@@ -112,6 +137,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       _currentSession = ChatSession(id: sessionId);
       _messages = [];
+      await _saveCurrentSession();
       await loadChatHistory(token);
     } catch (e) {
       debugPrint('Error switching session: $e');
@@ -130,8 +156,13 @@ class ChatProvider extends ChangeNotifier {
 
     try {
       await _chatService.endSession(token, _currentSession!.id);
-      _sessionPreviews.remove(_currentSession!.id);
-      await _saveStoredPreviews();
+
+      // Remove dari local storage
+      await _saveCurrentSession();
+
+      // Reload sessions
+      await loadAllSessions(token);
+
       _currentSession = null;
       _messages = [];
       notifyListeners();
@@ -141,6 +172,25 @@ class ChatProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  // Method untuk initialize provider saat pertama kali masuk halaman chat
+  Future<void> initializeChat(String token) async {
+    // Load semua sessions dulu
+    await loadAllSessions(token);
+
+    // Jika ada current session yang tersimpan, load historynya
+    if (_currentSession != null) {
+      try {
+        await loadChatHistory(token);
+      } catch (e) {
+        // Jika gagal load history, mungkin session sudah tidak valid
+        _currentSession = null;
+        _messages = [];
+        await _saveCurrentSession();
+        notifyListeners();
+      }
     }
   }
 }

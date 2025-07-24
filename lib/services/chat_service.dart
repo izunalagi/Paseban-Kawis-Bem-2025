@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/chat_model.dart';
-// import '../utils/constants.dart';
 
 class ChatService {
   final String baseUrl = "http://10.0.2.2:8000/api";
@@ -63,6 +62,26 @@ class ChatService {
           .toList();
     } else {
       throw Exception('Failed to get chat history');
+    }
+  }
+
+  // Method baru untuk mendapatkan semua sessions
+  Future<List<ChatSessionPreview>> getAllSessions(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/chat/sessions'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return (data['sessions'] as List)
+          .map((session) => ChatSessionPreview.fromJson(session))
+          .toList();
+    } else {
+      throw Exception('Failed to get chat sessions');
     }
   }
 
