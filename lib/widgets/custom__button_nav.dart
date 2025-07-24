@@ -33,6 +33,11 @@ class CustomBottomNav extends StatelessWidget {
           label: 'Peringkat',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.chat_outlined),
+          activeIcon: Icon(Icons.chat),
+          label: 'Chat AI',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           activeIcon: Icon(Icons.person),
           label: 'Profil',

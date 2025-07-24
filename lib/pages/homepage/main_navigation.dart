@@ -4,6 +4,7 @@ import '../../widgets/custom__button_nav.dart';
 import 'beranda.dart';
 import 'peringkat.dart';
 import 'profil.dart';
+import 'chatbot_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -17,6 +18,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _pages = [
     const HomePage(),
     const PeringkatPage(),
+    const ChatbotPage(),
     const ProfilePage(),
   ];
 
