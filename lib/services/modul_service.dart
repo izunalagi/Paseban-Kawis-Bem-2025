@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
 class ModulService {
-  static const String baseUrl = 'http://192.168.1.37:8000';
+  static const String baseUrl = 'http://172.29.207.86:8000';
 
   Future<List<dynamic>> fetchModul() async {
     final token = await AuthService().getToken();

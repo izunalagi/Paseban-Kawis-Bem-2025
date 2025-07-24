@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://192.168.1.37:8000';
+  static const String baseUrl = 'http://172.29.207.86:8000';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
@@ -241,5 +241,24 @@ class AuthService {
   Future<int?> getRoleId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('role_id');
+  }
+
+  Future<Map<String, dynamic>> getStatistik() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/statistik'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    } else {
+      throw Exception(
+        jsonDecode(res.body)['message'] ?? 'Gagal mengambil statistik',
+      );
+    }
   }
 }
