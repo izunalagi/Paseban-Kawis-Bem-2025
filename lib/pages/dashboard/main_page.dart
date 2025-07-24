@@ -11,11 +11,25 @@ import '../../../providers/category_modul_provider.dart';
 import '../../../providers/modul_provider.dart';
 import '../../../providers/auth_provider.dart';
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
   @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => Provider.of<AuthProvider>(context, listen: false).fetchStatistik(),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authProv = Provider.of<AuthProvider>(context);
     return WillPopScope(
       onWillPop: () async => false,
       child: Scaffold(
@@ -76,8 +90,8 @@ class AdminDashboard extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Search Bar
-              const CustomSearchBar(hintText: 'Cari data...'),
-              const SizedBox(height: 24),
+              // const CustomSearchBar(hintText: 'Cari data...'),
+              // const SizedBox(height: 24),
 
               // Statistics Cards
               const Text(
@@ -89,49 +103,55 @@ class AdminDashboard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Users',
-                      '1,234',
-                      Icons.people,
-                      Colors.blue,
+              if (authProv.statistikLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (authProv.statistikError != null)
+                Center(child: Text(authProv.statistikError!))
+              else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Total Users',
+                        authProv.totalUser?.toString() ?? '-',
+                        Icons.people,
+                        Colors.blue,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Modules',
-                      '56',
-                      Icons.book,
-                      Colors.green,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Total Modules',
+                        authProv.totalModul?.toString() ?? '-',
+                        Icons.book,
+                        Colors.green,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Quiz',
-                      '89',
-                      Icons.quiz,
-                      Colors.orange,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Total Quiz',
+                        '89', // statis
+                        Icons.quiz,
+                        Colors.orange,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Active Users',
-                      '987',
-                      Icons.trending_up,
-                      Colors.purple,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Active Users',
+                        authProv.userAktif?.toString() ?? '-',
+                        Icons.trending_up,
+                        Colors.purple,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 24),
 
               // Management Section

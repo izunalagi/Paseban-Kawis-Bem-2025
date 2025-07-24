@@ -6,6 +6,11 @@ class AuthProvider with ChangeNotifier {
   UserModel? user;
   String? token;
   int? roleId;
+  int? totalUser;
+  int? totalModul;
+  int? userAktif;
+  bool statistikLoading = false;
+  String? statistikError;
 
   Future<void> login(String email, String password) async {
     final data = await AuthService().login(email, password);
@@ -87,5 +92,21 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> resendRegisterOtp(String email) async {
     await AuthService().resendRegisterOtp(email);
+  }
+
+  Future<void> fetchStatistik() async {
+    statistikLoading = true;
+    statistikError = null;
+    notifyListeners();
+    try {
+      final data = await AuthService().getStatistik();
+      totalUser = data['total_user'];
+      totalModul = data['total_modul'];
+      userAktif = data['user_aktif'];
+    } catch (e) {
+      statistikError = e.toString();
+    }
+    statistikLoading = false;
+    notifyListeners();
   }
 }
