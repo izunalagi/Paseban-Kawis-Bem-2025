@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
-import '../../models/chat_model.dart';
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({super.key});

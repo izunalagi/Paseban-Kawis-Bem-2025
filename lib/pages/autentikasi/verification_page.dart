@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/custom_back_button.dart';
 import '../../providers/auth_provider.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,7 +34,6 @@ class _VerificationPageState extends State<VerificationPage>
   late final Animation<Offset> _bottomSlide;
 
   bool _isAnimationInitialized = false;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -87,12 +85,6 @@ class _VerificationPageState extends State<VerificationPage>
     super.dispose();
   }
 
-  Future<void> _clearPendingVerification() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('pending_verification_email');
-    await prefs.remove('pending_verification_type');
-  }
-
   void _onVerify() async {
     String code = _codeControllers.map((e) => e.text).join();
     print("Kode Verifikasi: $code");
@@ -107,9 +99,16 @@ class _VerificationPageState extends State<VerificationPage>
       return;
     }
 
-    setState(() => _isLoading = true);
-
     try {
+      // Tampilkan loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+
       Map<String, dynamic> result;
       if (widget.type == 'register') {
         result = await Provider.of<AuthProvider>(
@@ -123,8 +122,10 @@ class _VerificationPageState extends State<VerificationPage>
         ).verifyForgotOtp(widget.email!, code);
       }
 
-      if (!mounted) return;
+      // Tutup loading
+      Navigator.of(context).pop();
 
+      // Tampilkan notifikasi sukses
       _showFlushBar(
         widget.type == 'register'
             ? 'Verifikasi berhasil! Silakan login.'
@@ -132,14 +133,20 @@ class _VerificationPageState extends State<VerificationPage>
         isError: false,
       );
 
+      // Delay agar pesan sukses bisa terbaca user
       await Future.delayed(const Duration(milliseconds: 1500));
 
-      if (!mounted) return;
-
       if (widget.type == 'register') {
-        await _clearPendingVerification();
+        // Hapus data pending verifikasi sebelum redirect
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('pending_verification_email');
+        await prefs.remove('pending_verification_type');
+        print(
+          '[VERIFIKASI] Data pending verifikasi dihapus, redirect ke login...',
+        );
         Navigator.pushReplacementNamed(context, '/login');
       } else {
+        // Navigasi ke halaman reset password
         Navigator.pushReplacementNamed(
           context,
           '/reset-password',
@@ -147,6 +154,10 @@ class _VerificationPageState extends State<VerificationPage>
         );
       }
     } catch (e) {
+      // Tutup loading
+      Navigator.of(context).pop();
+
+      // Tampilkan error
       String errorMessage = "Verifikasi gagal!";
       if (e.toString().contains("OTP salah") ||
           e.toString().contains("invalid")) {
@@ -158,91 +169,43 @@ class _VerificationPageState extends State<VerificationPage>
       }
 
       _showFlushBar(errorMessage, isError: true);
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
   void _onResendCode() async {
-    if (_isLoading) return;
-
-    if (widget.email == null) {
-      _showFlushBar('Email tidak ditemukan!', isError: true);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
     try {
+      if (widget.email == null) {
+        _showFlushBar('Email tidak ditemukan!', isError: true);
+        return;
+      }
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
       if (widget.type == 'register') {
         await Provider.of<AuthProvider>(
           context,
           listen: false,
         ).resendRegisterOtp(widget.email!);
+        Navigator.of(context).pop();
+        _showFlushBar('Kode OTP telah dikirim ulang ke email.', isError: false);
       } else {
+        // Untuk forgot_password, panggil forgotPassword lagi
         await Provider.of<AuthProvider>(
           context,
           listen: false,
         ).forgotPassword(widget.email!);
-      }
-
-      _showFlushBar('Kode OTP telah dikirim ulang ke email.', isError: false);
-
-      // Reset input fields
-      for (var controller in _codeControllers) {
-        controller.clear();
-      }
-      if (_focusNodes.isNotEmpty) {
-        _focusNodes[0].requestFocus();
+        Navigator.of(context).pop();
+        _showFlushBar('Kode OTP telah dikirim ulang ke email.', isError: false);
       }
     } catch (e) {
+      Navigator.of(context).pop();
       _showFlushBar(
-        'Gagal mengirim ulang kode: ${e.toString()}',
+        'Gagal mengirim ulang kode: $e',
         isError: true,
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
-  }
-
-  Future<bool> _onWillPop() async {
-    bool shouldPop =
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Konfirmasi'),
-            content: Text(
-              widget.type == 'register'
-                  ? 'Jika Anda kembali, Anda perlu mendaftar ulang. Lanjutkan?'
-                  : 'Kembali ke halaman sebelumnya?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Tidak'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  await _clearPendingVerification();
-                  if (!mounted) return;
-                  Navigator.of(context).pop(true);
-                },
-                child: const Text('Ya'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-
-    if (shouldPop) {
-      await _clearPendingVerification();
-    }
-
-    return shouldPop;
   }
 
   Widget _buildCodeField(int index) {
@@ -304,7 +267,7 @@ class _VerificationPageState extends State<VerificationPage>
     if (!_isAnimationInitialized) return const SizedBox();
 
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: () async => false,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: false,
@@ -319,14 +282,7 @@ class _VerificationPageState extends State<VerificationPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CustomBackButton(
-                    onPressed: () async {
-                      if (await _onWillPop()) {
-                        if (!mounted) return;
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  ),
+                  // Hapus CustomBackButton
                   const SizedBox(height: 40),
                   FadeTransition(
                     opacity: _topFade,
@@ -334,8 +290,8 @@ class _VerificationPageState extends State<VerificationPage>
                       position: _topSlide,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
+                        children: const [
+                          Text(
                             'Verifikasi Kode',
                             style: TextStyle(
                               fontSize: 28,
@@ -343,10 +299,10 @@ class _VerificationPageState extends State<VerificationPage>
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Text(
-                            'Masukkan kode yang telah dikirimkan ke\n${widget.email ?? "email Anda"}.\nJangan berikan kode kepada siapapun.',
-                            style: const TextStyle(
+                            'Masukkan kode yang telah dikirimkan melalui email.\nJangan berikan kode kepada siapapun.',
+                            style: TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
                               height: 1.4,
@@ -370,27 +326,21 @@ class _VerificationPageState extends State<VerificationPage>
                           const SizedBox(height: 32),
                           Center(
                             child: TextButton(
-                              onPressed: _isLoading ? null : _onResendCode,
+                              onPressed: _onResendCode,
                               child: RichText(
-                                text: TextSpan(
+                                text: const TextSpan(
                                   text: "Belum menerima kode? ",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 14,
                                   ),
                                   children: [
                                     TextSpan(
-                                      text: _isLoading
-                                          ? "Mengirim..."
-                                          : "Kirim Ulang",
+                                      text: "Kirim Ulang",
                                       style: TextStyle(
-                                        color: _isLoading
-                                            ? Colors.white38
-                                            : Colors.white,
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w600,
-                                        decoration: _isLoading
-                                            ? null
-                                            : TextDecoration.underline,
+                                        decoration: TextDecoration.underline,
                                       ),
                                     ),
                                   ],
@@ -401,10 +351,8 @@ class _VerificationPageState extends State<VerificationPage>
                           const SizedBox(height: 40),
                           Center(
                             child: CustomButton(
-                              label: _isLoading
-                                  ? "Memverifikasi..."
-                                  : "Verifikasi",
-                              onPressed: _isLoading ? null : _onVerify,
+                              label: "Verifikasi",
+                              onPressed: _onVerify,
                             ),
                           ),
                         ],

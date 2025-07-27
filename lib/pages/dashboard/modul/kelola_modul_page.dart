@@ -43,7 +43,7 @@ class _KelolaModulPageState extends State<KelolaModulPage> {
     if (updated == true) {
       Provider.of<ModulProvider>(context, listen: false).fetchModul();
       Flushbar(
-        message: 'Modul berhasil diupdate',
+        message: 'Modul berhasil diperbarui',
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         margin: const EdgeInsets.all(8),
@@ -74,7 +74,7 @@ class _KelolaModulPageState extends State<KelolaModulPage> {
     if (added == true) {
       Provider.of<ModulProvider>(context, listen: false).fetchModul();
       Flushbar(
-        message: 'Modul berhasil ditambah',
+        message: 'Modul berhasil ditambahkan',
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         margin: const EdgeInsets.all(8),
@@ -271,8 +271,8 @@ class _KelolaModulPageState extends State<KelolaModulPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
         onPressed: goToAdd,
-        child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Tambah Modul',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

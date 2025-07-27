@@ -61,7 +61,7 @@ class _ProfilDashboardState extends State<ProfilDashboard> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            Future<void> _pickImage() async {
+            Future<void> pickImage() async {
               print('Icon kamera ditekan');
               final picker = ImagePicker();
               final picked = await picker.pickImage(
@@ -114,7 +114,7 @@ class _ProfilDashboardState extends State<ProfilDashboard> {
                           bottom: 0,
                           right: 0,
                           child: GestureDetector(
-                            onTap: _pickImage,
+                            onTap: pickImage,
                             child: Container(
                               decoration: BoxDecoration(
                                 color: Colors.white,

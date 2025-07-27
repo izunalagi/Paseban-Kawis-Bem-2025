@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserService {
-  static const String baseUrl = 'http://172.29.207.86:8000';
+  static const String baseUrl = 'http://10.179.12.86:8000';
 
   Future<List<dynamic>> fetchUserList() async {
     final prefs = await SharedPreferences.getInstance();
@@ -82,7 +82,9 @@ class UserService {
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     } else {
-      throw Exception(jsonDecode(res.body)['message'] ?? 'Gagal update profil');
+      throw Exception(
+        jsonDecode(res.body)['message'] ?? 'Gagal perbarui profil',
+      );
     }
   }
 }

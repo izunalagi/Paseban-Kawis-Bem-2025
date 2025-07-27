@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
 class CategoryModulService {
-  static const String baseUrl = 'http://172.29.207.86:8000';
+  static const String baseUrl = 'http://10.179.12.86:8000';
 
   Future<List<dynamic>> fetchKategori() async {
     final token = await AuthService().getToken();
@@ -60,7 +59,7 @@ class CategoryModulService {
       return jsonDecode(response.body);
     } else {
       throw Exception(
-        jsonDecode(response.body)['message'] ?? 'Gagal edit kategori',
+        jsonDecode(response.body)['message'] ?? 'Gagal ubah kategori',
       );
     }
   }

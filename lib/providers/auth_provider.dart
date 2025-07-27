@@ -8,6 +8,7 @@ class AuthProvider with ChangeNotifier {
   int? roleId;
   int? totalUser;
   int? totalModul;
+  int? totalQuiz;
   int? userAktif;
   bool statistikLoading = false;
   String? statistikError;
@@ -102,6 +103,7 @@ class AuthProvider with ChangeNotifier {
       final data = await AuthService().getStatistik();
       totalUser = data['total_user'];
       totalModul = data['total_modul'];
+      totalQuiz = data['total_quiz'];
       userAktif = data['user_aktif'];
     } catch (e) {
       statistikError = e.toString();

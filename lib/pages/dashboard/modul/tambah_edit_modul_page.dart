@@ -36,12 +36,8 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
       _linkController.text = widget.modul!['link_video'] ?? '';
       _deskripsiController.text = widget.modul!['deskripsi_modul'] ?? '';
       _selectedKategori = widget.modul!['category_modul_id'];
-      _pdfName = widget.modul!['path_pdf'] != null
-          ? widget.modul!['path_pdf'].toString().split('/').last
-          : null;
-      _fotoName = widget.modul!['foto'] != null
-          ? widget.modul!['foto'].toString().split('/').last
-          : null;
+      _pdfName = widget.modul!['path_pdf']?.toString().split('/').last;
+      _fotoName = widget.modul!['foto']?.toString().split('/').last;
       // _fotoPath = widget.modul!['foto'] != null
       //     ? widget.modul!['foto']
       //     : null;
@@ -137,7 +133,7 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
         backgroundColor: AppColors.primary,
         elevation: 0,
         title: Text(
-          isEdit ? 'Edit Modul' : 'Tambah Modul',
+          isEdit ? 'Ubah Modul' : 'Tambah Modul',
           style: const TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -208,7 +204,7 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
                             onPressed: isLoading ? null : _pickFoto,
                             icon: const Icon(Icons.photo),
                             label: Text(
-                              _fotoName != null ? 'Ganti Foto' : 'Upload Foto',
+                              _fotoName != null ? 'Ganti Foto' : 'Unggah Foto',
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -314,7 +310,7 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
                             onPressed: isLoading ? null : _pickPdf,
                             icon: const Icon(Icons.attach_file),
                             label: Text(
-                              _pdfName ?? 'Upload PDF',
+                              _pdfName ?? 'Unggah PDF',
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),

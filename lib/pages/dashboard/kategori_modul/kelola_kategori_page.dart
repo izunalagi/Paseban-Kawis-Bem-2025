@@ -40,7 +40,7 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
         listen: false,
       ).fetchKategori();
       Flushbar(
-        message: 'Kategori berhasil diupdate',
+        message: 'Kategori berhasil diperbarui',
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         margin: const EdgeInsets.all(8),
@@ -67,7 +67,7 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
         listen: false,
       ).fetchKategori();
       Flushbar(
-        message: 'Kategori berhasil ditambah',
+        message: 'Kategori berhasil ditambahkan',
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         margin: const EdgeInsets.all(8),
@@ -185,8 +185,8 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
         onPressed: goToAdd,
-        child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Tambah Kategori',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

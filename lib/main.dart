@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pasebankawis/pages/dashboard/main_page.dart';
 import 'pages/autentikasi/splash_page.dart';
 import 'pages/autentikasi/login_page.dart';
 import 'pages/autentikasi/register_page.dart';
-import 'pages/autentikasi/verification_page.dart';
 import 'pages/homepage/main_navigation.dart';
-import 'pages/homepage/chatbot_page.dart';
 import 'providers/auth_provider.dart';
-import 'providers/chat_provider.dart';
 import 'pages/autentikasi/reset_password._page.dart';
 import 'pages/dashboard/main_navigation_dashboard.dart';
 
@@ -21,11 +17,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
-        ChangeNotifierProvider(create: (context) => ChatProvider()),
-      ],
+    return ChangeNotifierProvider(
+      create: (context) => AuthProvider(),
       child: MaterialApp(
         title: 'Paseban Kawis',
         debugShowCheckedModeBanner: false,
@@ -38,7 +31,6 @@ class MyApp extends StatelessWidget {
           '/admin/dashboard': (context) => const MainNavigationDashboard(),
           '/splash': (context) => const SplashPage(),
           '/reset-password': (context) => const ResetPasswordPage(),
-          '/chatbot': (context) => const ChatbotPage(),
         },
       ),
     );

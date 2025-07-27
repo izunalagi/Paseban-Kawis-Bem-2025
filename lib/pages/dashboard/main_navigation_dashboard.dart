@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
-import '../../widgets/custom__button_nav.dart';
 import 'main_page.dart';
 import 'panduan/panduan_page.dart';
 import 'profil_dashboard.dart';
+import '../../providers/quiz_provider.dart';
+import 'package:provider/provider.dart';
 // TODO: import halaman Panduan dan Profil jika sudah ada
 
 class MainNavigationDashboard extends StatefulWidget {
@@ -24,42 +25,45 @@ class _MainNavigationDashboardState extends State<MainNavigationDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => false,
-      child: Scaffold(
-        backgroundColor: AppColors.backgroundLight,
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: AppColors.dashboardPrimary,
-          elevation: 0,
-          title: const Text(
-            'Admin Dashboard',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(
-                Icons.notifications_outlined,
+    return ChangeNotifierProvider(
+      create: (_) => QuizProvider(),
+      child: WillPopScope(
+        onWillPop: () async => false,
+        child: Scaffold(
+          backgroundColor: AppColors.backgroundLight,
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: AppColors.dashboardPrimary,
+            elevation: 0,
+            title: const Text(
+              'Admin Dashboard',
+              style: TextStyle(
                 color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
-              onPressed: () {},
             ),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: _pages[_selectedIndex],
-        bottomNavigationBar: CustomBottomNavDashboard(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          backgroundColor: AppColors.dashboardPrimary,
+            actions: [
+              IconButton(
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.white,
+                ),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: _pages[_selectedIndex],
+          bottomNavigationBar: CustomBottomNavDashboard(
+            currentIndex: _selectedIndex,
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            backgroundColor: AppColors.dashboardPrimary,
+          ),
         ),
       ),
     );

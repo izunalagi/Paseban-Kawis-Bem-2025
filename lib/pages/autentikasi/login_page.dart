@@ -131,7 +131,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     });
 
     try {
-      print("🔄 Mencoba login dengan email: " + emailController.text);
+      print("🔄 Mencoba login dengan email: ${emailController.text}");
 
       await Provider.of<AuthProvider>(
         context,

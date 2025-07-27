@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
 class ModulService {
-  static const String baseUrl = 'http://172.29.207.86:8000';
+  static const String baseUrl = 'http://10.179.12.86:8000';
 
   Future<List<dynamic>> fetchModul() async {
     final token = await AuthService().getToken();
@@ -74,7 +73,7 @@ class ModulService {
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     } else {
-      throw Exception(jsonDecode(res.body)['message'] ?? 'Gagal edit modul');
+      throw Exception(jsonDecode(res.body)['message'] ?? 'Gagal ubah modul');
     }
   }
 

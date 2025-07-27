@@ -1,24 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/quiz_provider.dart';
-import 'tambah_edit_quiz_page.dart';
 import '../../../utils/constants.dart';
+import 'tambah_edit_soal_page.dart';
 import 'package:another_flushbar/flushbar.dart';
-import 'kelola_soal_page.dart';
+import 'kelola_pilihan_page.dart';
 
-class QuizPage extends StatefulWidget {
-  const QuizPage({super.key});
+class KelolaSoalPage extends StatefulWidget {
+  final int quizId;
+  final String quizTitle;
+  const KelolaSoalPage({
+    super.key,
+    required this.quizId,
+    required this.quizTitle,
+  });
 
   @override
-  State<QuizPage> createState() => _QuizPageState();
+  State<KelolaSoalPage> createState() => _KelolaSoalPageState();
 }
 
-class _QuizPageState extends State<QuizPage> {
+class _KelolaSoalPageState extends State<KelolaSoalPage> {
   @override
   void initState() {
     super.initState();
     Future.microtask(
-      () => Provider.of<QuizProvider>(context, listen: false).fetchQuizList(),
+      () => Provider.of<QuizProvider>(
+        context,
+        listen: false,
+      ).fetchSoalList(widget.quizId),
     );
   }
 
@@ -28,14 +37,17 @@ class _QuizPageState extends State<QuizPage> {
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider.value(
           value: Provider.of<QuizProvider>(context, listen: false),
-          child: TambahEditQuizPage(quiz: data),
+          child: TambahEditSoalPage(quizId: widget.quizId, soal: data),
         ),
       ),
     );
     if (updated == true) {
-      Provider.of<QuizProvider>(context, listen: false).fetchQuizList();
+      Provider.of<QuizProvider>(
+        context,
+        listen: false,
+      ).fetchSoalList(widget.quizId);
       Flushbar(
-        message: 'Kuis berhasil diperbarui',
+        message: 'Soal berhasil diperbarui',
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         margin: const EdgeInsets.all(8),
@@ -52,14 +64,17 @@ class _QuizPageState extends State<QuizPage> {
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider.value(
           value: Provider.of<QuizProvider>(context, listen: false),
-          child: const TambahEditQuizPage(),
+          child: TambahEditSoalPage(quizId: widget.quizId),
         ),
       ),
     );
     if (added == true) {
-      Provider.of<QuizProvider>(context, listen: false).fetchQuizList();
+      Provider.of<QuizProvider>(
+        context,
+        listen: false,
+      ).fetchSoalList(widget.quizId);
       Flushbar(
-        message: 'Kuis berhasil ditambah',
+        message: 'Soal berhasil ditambahkan',
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         margin: const EdgeInsets.all(8),
@@ -77,27 +92,30 @@ class _QuizPageState extends State<QuizPage> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-        title: const Text('Kelola Kuis', style: TextStyle(color: Colors.white)),
+        title: Text(
+          'Soal: ${widget.quizTitle}',
+          style: const TextStyle(color: Colors.white),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Consumer<QuizProvider>(
-        builder: (context, prov, child) {
-          if (prov.isLoading) {
+        builder: (context, prov, _) {
+          if (prov.isLoadingSoal) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (prov.error != null) {
-            return Center(child: Text(prov.error!));
+          if (prov.errorSoal != null) {
+            return Center(child: Text(prov.errorSoal!));
           }
-          if (prov.quizList.isEmpty) {
-            return const Center(child: Text('Belum ada kuis'));
+          if (prov.soalList.isEmpty) {
+            return const Center(child: Text('Belum ada soal'));
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: prov.quizList.length,
+            itemCount: prov.soalList.length,
             itemBuilder: (context, i) {
-              final quiz = prov.quizList[i];
+              final soal = prov.soalList[i];
               return Dismissible(
-                key: ValueKey(quiz['id']),
+                key: ValueKey(soal['id']),
                 direction: DismissDirection.endToStart,
                 background: Container(
                   color: Colors.red,
@@ -110,7 +128,7 @@ class _QuizPageState extends State<QuizPage> {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Konfirmasi Hapus'),
-                      content: const Text('Yakin ingin menghapus kuis ini?'),
+                      content: const Text('Yakin ingin menghapus soal ini?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
@@ -130,11 +148,11 @@ class _QuizPageState extends State<QuizPage> {
                       context,
                       listen: false,
                     );
-                    await prov.deleteQuiz(quiz['id']);
+                    await prov.deleteSoal(soal['id'], widget.quizId);
 
-                    if (prov.error != null) {
+                    if (prov.errorSoal != null) {
                       Flushbar(
-                        message: 'Gagal hapus kuis: ${prov.error}',
+                        message: 'Gagal hapus soal: ${prov.errorSoal}',
                         backgroundColor: Colors.red,
                         duration: const Duration(seconds: 2),
                         margin: const EdgeInsets.all(8),
@@ -144,7 +162,7 @@ class _QuizPageState extends State<QuizPage> {
                       ).show(context);
                     } else {
                       Flushbar(
-                        message: 'Kuis berhasil dihapus',
+                        message: 'Soal berhasil dihapus',
                         backgroundColor: Colors.green,
                         duration: const Duration(seconds: 2),
                         margin: const EdgeInsets.all(8),
@@ -158,7 +176,7 @@ class _QuizPageState extends State<QuizPage> {
                     }
                   } catch (e) {
                     Flushbar(
-                      message: 'Gagal hapus kuis: $e',
+                      message: 'Gagal hapus soal: $e',
                       backgroundColor: Colors.red,
                       duration: const Duration(seconds: 2),
                       margin: const EdgeInsets.all(8),
@@ -174,14 +192,16 @@ class _QuizPageState extends State<QuizPage> {
                       context,
                       listen: false,
                     );
+                    quizProvider.setPilihanListFromSoal(soal['id']);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChangeNotifierProvider.value(
                           value: quizProvider,
-                          child: KelolaSoalPage(
-                            quizId: quiz['id'],
-                            quizTitle: quiz['title'] ?? '-',
+                          child: KelolaPilihanPage(
+                            questionId: soal['id'],
+                            quizId: widget.quizId,
+                            questionText: soal['question_text'] ?? '-',
                           ),
                         ),
                       ),
@@ -204,72 +224,60 @@ class _QuizPageState extends State<QuizPage> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          // Thumbnail kuis
-                          if (quiz['thumbnail'] != null &&
-                              quiz['thumbnail'] != '')
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                image: DecorationImage(
-                                  image: NetworkImage(
-                                    quiz['thumbnail'].startsWith('http')
-                                        ? quiz['thumbnail']
-                                        : 'http://10.179.12.86:8000/${quiz['thumbnail']}',
-                                  ),
-                                  fit: BoxFit.cover,
-                                  onError: (exception, stackTrace) {
-                                    print('Error loading image: $exception');
-                                  },
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.quiz,
-                                color: AppColors.primary,
-                                size: 32,
-                              ),
-                            ),
-                          const SizedBox(width: 16),
-                          // Informasi kuis
+                          // Informasi soal
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  quiz['title'] ?? '-',
+                                  'Soal ${i + 1}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 16,
+                                    fontSize: 14,
+                                    color: AppColors.primary,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  quiz['description'] ?? '-',
+                                  soal['question_text'] ?? '-',
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 16,
                                     color: AppColors.textSecondary,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
+                                const SizedBox(height: 8),
+                                // Tampilkan jumlah pilihan jika ada
+                                if (soal['options'] != null &&
+                                    soal['options'].isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${soal['options'].length} pilihan',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.edit, color: AppColors.primary),
-                            onPressed: () => goToEdit(quiz),
+                            icon: const Icon(
+                              Icons.edit,
+                              color: AppColors.primary,
+                            ),
+                            onPressed: () => goToEdit(soal),
                           ),
                         ],
                       ),
@@ -284,7 +292,7 @@ class _QuizPageState extends State<QuizPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
         onPressed: goToAdd,
-        tooltip: 'Tambah Kuis',
+        tooltip: 'Tambah Soal',
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

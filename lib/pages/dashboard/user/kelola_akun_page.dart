@@ -38,7 +38,7 @@ class _KelolaAkunPageState extends State<KelolaAkunPage> {
             return Center(child: Text(prov.error!));
           }
           if (prov.users.isEmpty) {
-            return const Center(child: Text('Belum ada user'));
+            return const Center(child: Text('Belum ada pengguna'));
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -58,8 +58,10 @@ class _KelolaAkunPageState extends State<KelolaAkunPage> {
                   return await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Konfirmasi Hapus'),
-                      content: Text('Yakin ingin menghapus user ini?'),
+                      title: const Text('Konfirmasi'),
+                      content: const Text(
+                        'Yakin ingin menghapus pengguna ini?',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
@@ -80,7 +82,7 @@ class _KelolaAkunPageState extends State<KelolaAkunPage> {
                   ).deleteUser(u['id']);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('User berhasil dihapus'),
+                      content: Text('Pengguna berhasil dihapus'),
                       backgroundColor: Colors.green,
                     ),
                   );

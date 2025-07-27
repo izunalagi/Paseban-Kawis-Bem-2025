@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_card.dart';
-import '../../widgets/custom_search_bar.dart';
 import '../../pages/dashboard/kuis/main_kuis.dart';
 import '../../pages/dashboard/modul/kelola_modul_page.dart';
 import '../../pages/dashboard/user/main_user.dart';
@@ -10,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/category_modul_provider.dart';
 import '../../../providers/modul_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/quiz_provider.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -112,7 +112,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   children: [
                     Expanded(
                       child: _buildStatCard(
-                        'Total Users',
+                        'Total Pengguna',
                         authProv.totalUser?.toString() ?? '-',
                         Icons.people,
                         Colors.blue,
@@ -121,7 +121,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildStatCard(
-                        'Total Modules',
+                        'Total Modul',
                         authProv.totalModul?.toString() ?? '-',
                         Icons.book,
                         Colors.green,
@@ -134,8 +134,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   children: [
                     Expanded(
                       child: _buildStatCard(
-                        'Total Quiz',
-                        '89', // statis
+                        'Total Kuis',
+                        authProv.totalQuiz?.toString() ?? '-',
                         Icons.quiz,
                         Colors.orange,
                       ),
@@ -143,7 +143,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildStatCard(
-                        'Active Users',
+                        'Pengguna Aktif',
                         authProv.userAktif?.toString() ?? '-',
                         Icons.trending_up,
                         Colors.purple,
@@ -156,7 +156,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
               // Management Section
               const Text(
-                'Manajemen Data',
+                'Kelola Data',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -166,8 +166,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(height: 16),
 
               CustomCard(
-                title: 'Kelola Users',
-                subtitle: 'Tambah, edit, dan hapus data pengguna',
+                title: 'Kelola Pengguna',
+                subtitle: 'Tambah, ubah, dan hapus data pengguna',
                 icon: Icons.people_outline,
                 color: Colors.blue,
                 onTap: () {
@@ -181,7 +181,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
               CustomCard(
                 title: 'Kelola Modul',
-                subtitle: 'Tambah, edit, dan hapus modul pembelajaran',
+                subtitle: 'Tambah, ubah, dan hapus modul pembelajaran',
                 icon: Icons.library_books_outlined,
                 color: Colors.green,
                 onTap: () {
@@ -207,7 +207,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
               CustomCard(
                 title: 'Kelola Kategori',
-                subtitle: 'Tambah, edit, dan hapus kategori modul',
+                subtitle: 'Tambah, ubah, dan hapus kategori modul',
                 icon: Icons.category_outlined,
                 color: Colors.purple,
                 onTap: () {
@@ -225,14 +225,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(height: 12),
 
               CustomCard(
-                title: 'Kelola Quiz',
-                subtitle: 'Tambah, edit, dan hapus soal quiz',
+                title: 'Kelola Kuis',
+                subtitle: 'Tambah, ubah, dan hapus soal kuis',
                 icon: Icons.quiz_outlined,
                 color: Colors.orange,
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => QuizPage()),
+                    MaterialPageRoute(
+                      builder: (context) => ChangeNotifierProvider(
+                        create: (_) => QuizProvider(),
+                        child: QuizPage(),
+                      ),
+                    ),
                   );
                 },
               ),
