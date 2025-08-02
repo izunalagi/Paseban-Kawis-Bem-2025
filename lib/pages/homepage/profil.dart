@@ -3,8 +3,13 @@ import 'package:provider/provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/loading_widget.dart';
 import '../../providers/auth_provider.dart';
 import 'package:another_flushbar/flushbar.dart';
+import '../../services/user_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../../services/modul_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,7 +19,189 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final int _selectedIndex = 2;
+  final int _selectedIndex = 3; // Profil sekarang di indeks 3 (paling kanan)
+  Map<String, dynamic>? _profile;
+  bool _loadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    setState(() => _loadingProfile = true);
+    try {
+      final data = await UserService().getProfile();
+      setState(() {
+        _profile = data;
+        _loadingProfile = false;
+      });
+    } catch (e) {
+      setState(() => _loadingProfile = false);
+      Flushbar(
+        message: 'Gagal mengambil profil: $e',
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 2),
+        flushbarPosition: FlushbarPosition.TOP,
+      ).show(context);
+    }
+  }
+
+  void _showEditProfileDialog() {
+    final namaController = TextEditingController(text: _profile?['nama'] ?? '');
+    final emailController = TextEditingController(
+      text: _profile?['email'] ?? '',
+    );
+    final teleponController = TextEditingController(
+      text: _profile?['telepon'] ?? '',
+    );
+    File? selectedImage;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            Future<void> pickImage() async {
+              print('Icon kamera ditekan');
+              final picker = ImagePicker();
+              final picked = await picker.pickImage(
+                source: ImageSource.gallery,
+              );
+              print('Picked: ${picked?.path}');
+              if (picked != null) {
+                setState(() {
+                  selectedImage = File(picked.path);
+                });
+              }
+            }
+
+            String? fotoUrl = _profile?['foto'];
+            if (fotoUrl != null &&
+                fotoUrl.isNotEmpty &&
+                !fotoUrl.startsWith('http')) {
+              fotoUrl = '${ModulService.baseUrl}/$fotoUrl';
+            }
+
+            return AlertDialog(
+              title: const Text('Edit Profil'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 36,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: selectedImage != null
+                              ? FileImage(selectedImage!)
+                              : (fotoUrl != null && fotoUrl.isNotEmpty
+                                        ? NetworkImage(fotoUrl)
+                                        : null)
+                                    as ImageProvider?,
+                          child:
+                              (selectedImage == null &&
+                                  (fotoUrl == null || fotoUrl.isEmpty))
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 32,
+                                  color: Colors.grey,
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: pickImage,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(6),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 20,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: namaController,
+                      decoration: const InputDecoration(labelText: 'Nama'),
+                    ),
+                    TextField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    TextField(
+                      controller: teleponController,
+                      decoration: const InputDecoration(labelText: 'Telepon'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      Navigator.of(context).pop();
+                      await UserService().updateProfile(
+                        nama: namaController.text,
+                        email: emailController.text,
+                        telepon: teleponController.text,
+                        fotoPath: selectedImage?.path,
+                      );
+                      await _fetchProfile();
+
+                      // Refresh nama user di beranda
+                      if (mounted) {
+                        // Trigger rebuild untuk refresh nama di beranda
+                        setState(() {});
+                      }
+
+                      Flushbar(
+                        message: 'Profil berhasil diupdate',
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                        flushbarPosition: FlushbarPosition.TOP,
+                      ).show(context);
+                    } catch (e) {
+                      Flushbar(
+                        message: 'Gagal update profil: $e',
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 2),
+                        flushbarPosition: FlushbarPosition.TOP,
+                      ).show(context);
+                    }
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   void _showLogoutDialog() {
     showDialog(
@@ -124,78 +311,205 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    String? fotoUrl = _profile?['foto'];
+    if (fotoUrl != null && fotoUrl.isNotEmpty && !fotoUrl.startsWith('http')) {
+      fotoUrl = '${ModulService.baseUrl}/$fotoUrl';
+    }
+
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Profil',
-        backgroundColor: AppColors.primaryButton,
-      ),
-      backgroundColor: AppColors.backgroundWhite,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: Colors.grey[300],
-              backgroundImage: AssetImage(
-                'assets/profile_placeholder.png',
-              ), // Ganti jika ada foto user
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Izuna Aja',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+      appBar: const CustomAppBar(title: 'Profil'),
+      body: _loadingProfile
+          ? const LoadingWidget(message: 'Memuat profil...')
+          : Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColors.primary, AppColors.backgroundLight],
+                  stops: [0.0, 0.3],
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                child: Column(
+                  children: [
+                    // Profile Header Card
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shadowMedium,
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 48,
+                                backgroundColor: Colors.grey[300],
+                                backgroundImage:
+                                    (fotoUrl != null && fotoUrl.isNotEmpty)
+                                    ? NetworkImage(fotoUrl)
+                                    : null,
+                                child: (fotoUrl == null || fotoUrl.isEmpty)
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 40,
+                                        color: Colors.grey,
+                                      )
+                                    : null,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _profile?['nama'] ?? '-',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _profile?['email'] ?? '-',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Profile Options Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shadowMedium,
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          _buildProfileTile(
+                            icon: Icons.edit,
+                            iconColor: AppColors.accent,
+                            title: 'Ubah Profil',
+                            subtitle: 'Tekan untuk ubah profil',
+                            onTap: _showEditProfileDialog,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildProfileTile(
+                            icon: Icons.phone_android,
+                            iconColor: AppColors.accent,
+                            title: 'Nomor Telepon',
+                            subtitle: _profile?['telepon'] ?? '-',
+                            showTrailing: false,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildProfileTile(
+                            icon: Icons.description,
+                            iconColor: AppColors.accent,
+                            title: 'Syarat dan Ketentuan',
+                            subtitle:
+                                'Tekan untuk melihat syarat dan ketentuan',
+                            onTap: () {
+                              // TODO: Navigate to terms page
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Logout Button Card
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shadowMedium,
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: _showLogoutDialog,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.logout,
+                                    color: AppColors.error,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Keluar',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Keluar dari aplikasi',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textLight,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Text(
-              'izunaaja@gmail.com',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 24),
-            _buildProfileTile(
-              icon: Icons.edit,
-              iconColor: AppColors.primaryButton,
-              title: 'Edit Profil',
-              subtitle: 'Tekan untuk edit profil',
-              onTap: () {
-                // TODO: Navigate to Edit Profile
-              },
-            ),
-            const SizedBox(height: 8),
-            _buildProfileTile(
-              icon: Icons.phone_android,
-              iconColor: AppColors.primaryButton,
-              title: 'Nomor Telepon',
-              subtitle: '081216519331',
-              showTrailing: false,
-            ),
-            const SizedBox(height: 8),
-            _buildProfileTile(
-              icon: Icons.description,
-              iconColor: AppColors.primaryButton,
-              title: 'Syarat dan Ketentuan',
-              subtitle: 'Tekan untuk melihat syarat dan ketentuan',
-              onTap: () {
-                // TODO: Navigate to terms page
-              },
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: CustomButton(
-                label: 'Keluar',
-                onPressed: _showLogoutDialog,
-                backgroundColor: AppColors.primaryButton,
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
     );
   }
 
@@ -208,20 +522,26 @@ class _ProfilePageState extends State<ProfilePage> {
     bool showTrailing = true,
   }) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: iconColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: iconColor.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
@@ -250,11 +570,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               if (showTrailing)
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textLight,
-                  size: 20,
-                ),
+                Icon(Icons.chevron_right, color: AppColors.textLight, size: 20),
             ],
           ),
         ),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../utils/constants.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({super.key});
@@ -14,10 +17,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // Custom colors
-  static const Color darkBlue = Color(0xFF043461);
-  static const Color lightBlue = Color(0xFF95C2FF);
+  bool _isInitializing = true;
 
   @override
   void initState() {
@@ -28,6 +28,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   Future<void> _initializeChat() async {
+    setState(() => _isInitializing = true);
+
     final token = context.read<AuthProvider>().token ?? '';
     final chatProvider = context.read<ChatProvider>();
 
@@ -46,6 +48,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
           ..showSnackBar(
             SnackBar(content: Text('Gagal menginisialisasi chat: $e')),
           );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isInitializing = false);
       }
     }
   }
@@ -131,94 +137,130 @@ class _ChatbotPageState extends State<ChatbotPage> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: darkBlue,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: Column(
-            children: [
-              const Text(
-                'ChatBot',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: AppBar(
+            backgroundColor: const Color(0xFF043461),
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            title: const Text(
+              'ChatBot',
+              style: TextStyle(
+                color: AppColors.textWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              const Text(
-                'Tanya apapun seputar materi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.normal,
-                ),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () {
+                  _scaffoldKey.currentState?.openEndDrawer();
+                },
               ),
             ],
           ),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () {
-                _scaffoldKey.currentState?.openEndDrawer();
-              },
-            ),
-          ],
         ),
         endDrawer: _buildDrawer(),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [lightBlue, Colors.white],
-              stops: [0.0, 0.5],
-            ),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: Consumer<ChatProvider>(
-                  builder: (context, chatProvider, child) {
-                    if (chatProvider.isLoading &&
-                        chatProvider.messages.isEmpty) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(darkBlue),
+        body: _isInitializing
+            ? const LoadingWidget(message: 'Memuat chatbot...')
+            : Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.primary, AppColors.backgroundLight],
+                    stops: [0.0, 0.3],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // Subtitle section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      child: const Text(
+                        'Tanya apapun seputar materi',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal,
                         ),
-                      );
-                    }
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      child: Consumer<ChatProvider>(
+                        builder: (context, chatProvider, child) {
+                          if (chatProvider.isLoading &&
+                              chatProvider.messages.isEmpty) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.shadowMedium,
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              margin: const EdgeInsets.all(16),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.accent,
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Memulai percakapan...',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
 
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: chatProvider.messages.length,
-                      itemBuilder: (context, index) {
-                        final message = chatProvider.messages[index];
-                        return Column(
-                          children: [
-                            _UserMessageBubble(message: message.prompt),
-                            _BotMessageBubble(
-                              message: message.response,
-                              isLatest:
-                                  index == chatProvider.messages.length - 1,
-                              isLoading: chatProvider.isLoading,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                        );
-                      },
-                    );
-                  },
+                          return ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: chatProvider.messages.length,
+                            itemBuilder: (context, index) {
+                              final message = chatProvider.messages[index];
+                              return Column(
+                                children: [
+                                  _UserMessageBubble(message: message.prompt),
+                                  _BotMessageBubble(
+                                    message: message.response,
+                                    isLatest:
+                                        index ==
+                                        chatProvider.messages.length - 1,
+                                    isLoading: chatProvider.isLoading,
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    _buildInputSection(),
+                  ],
                 ),
               ),
-              _buildInputSection(),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -233,7 +275,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
               children: [
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-                  color: darkBlue,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppColors.primary, AppColors.primaryLight],
+                    ),
+                  ),
                   child: const Row(
                     children: [
                       Icon(Icons.chat_outlined, size: 24, color: Colors.white),
@@ -251,10 +299,37 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
                 Expanded(
                   child: chatProvider.sessionPreviews.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Belum ada riwayat obrolan',
-                            style: TextStyle(color: Colors.grey),
+                      ? Container(
+                          margin: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.shadowLight,
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 48,
+                                color: AppColors.textLight,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Belum ada riwayat obrolan',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       : Padding(
@@ -271,13 +346,25 @@ class _ChatbotPageState extends State<ChatbotPage> {
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: isActive
-                                      ? Border.all(color: darkBlue, width: 2)
-                                      : Border.all(color: Colors.grey.shade300),
+                                      ? Border.all(
+                                          color: AppColors.accent,
+                                          width: 2,
+                                        )
+                                      : Border.all(
+                                          color: AppColors.borderLight,
+                                        ),
                                   color: isActive
-                                      ? darkBlue.withOpacity(0.1)
+                                      ? AppColors.accent.withOpacity(0.1)
                                       : Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.shadowLight,
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: ListTile(
                                   title: Text(
@@ -286,8 +373,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: isActive
-                                          ? darkBlue
-                                          : Colors.black87,
+                                          ? AppColors.primary
+                                          : AppColors.textPrimary,
                                       fontWeight: isActive
                                           ? FontWeight.w600
                                           : FontWeight.normal,
@@ -300,7 +387,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                                           ),
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                            color: AppColors.textSecondary,
                                           ),
                                         )
                                       : null,
@@ -327,11 +414,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
                           style: TextStyle(color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: darkBlue,
+                          backgroundColor: AppColors.accent,
                           padding: const EdgeInsets.all(16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 4,
+                          shadowColor: AppColors.accent.withOpacity(0.3),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
@@ -387,15 +476,18 @@ class _ChatbotPageState extends State<ChatbotPage> {
                     hintText: 'Ketik pesan...',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: darkBlue),
+                      borderSide: const BorderSide(color: AppColors.primary),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: darkBlue),
+                      borderSide: const BorderSide(color: AppColors.primary),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: darkBlue, width: 2),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -409,7 +501,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
               const SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
-                  color: darkBlue,
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(25),
                 ),
                 child: IconButton(
@@ -430,7 +522,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
 class _UserMessageBubble extends StatelessWidget {
   final String message;
-  static const Color darkBlue = Color(0xFF043461);
 
   const _UserMessageBubble({required this.message});
 
@@ -445,7 +536,7 @@ class _UserMessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: darkBlue,
+          color: AppColors.accent,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
@@ -454,9 +545,9 @@ class _UserMessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: AppColors.shadowMedium,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -473,7 +564,6 @@ class _BotMessageBubble extends StatefulWidget {
   final String message;
   final bool isLatest;
   final bool isLoading;
-  static const Color darkBlue = Color(0xFF043461);
 
   const _BotMessageBubble({
     required this.message,
@@ -566,10 +656,7 @@ class _BotMessageBubbleState extends State<_BotMessageBubble>
         spans.add(
           TextSpan(
             text: beforeText.replaceAll('\\n', '\n'),
-            style: const TextStyle(
-              color: _BotMessageBubble.darkBlue,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
           ),
         );
       }
@@ -579,7 +666,7 @@ class _BotMessageBubbleState extends State<_BotMessageBubble>
         TextSpan(
           text: match.group(1)?.replaceAll('\\n', '\n') ?? '',
           style: const TextStyle(
-            color: _BotMessageBubble.darkBlue,
+            color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -595,10 +682,7 @@ class _BotMessageBubbleState extends State<_BotMessageBubble>
       spans.add(
         TextSpan(
           text: remainingText.replaceAll('\\n', '\n'),
-          style: const TextStyle(
-            color: _BotMessageBubble.darkBlue,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
         ),
       );
     }
@@ -617,7 +701,7 @@ class _BotMessageBubbleState extends State<_BotMessageBubble>
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.95),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(4),
             topRight: Radius.circular(20),
@@ -626,9 +710,9 @@ class _BotMessageBubbleState extends State<_BotMessageBubble>
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: AppColors.shadowMedium,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -643,10 +727,7 @@ class _BotMessageBubbleState extends State<_BotMessageBubble>
                 padding: EdgeInsets.only(top: 4),
                 child: Text(
                   '▌',
-                  style: TextStyle(
-                    color: _BotMessageBubble.darkBlue,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: AppColors.accent, fontSize: 16),
                 ),
               ),
           ],

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/chat_model.dart';
 
 class ChatService {
-  final String baseUrl = "http://10.179.12.86:8000/api";
+  final String baseUrl = "http://10.42.223.86:8000/api";
 
   Future<ChatSession> startSession(String token) async {
     final response = await http.post(

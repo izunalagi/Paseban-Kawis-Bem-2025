@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserService {
-  static const String baseUrl = 'http://10.179.12.86:8000';
+  static const String baseUrl = 'http://10.42.223.86:8000';
 
   Future<List<dynamic>> fetchUserList() async {
     final prefs = await SharedPreferences.getInstance();
@@ -80,11 +80,42 @@ class UserService {
     final streamed = await request.send();
     final res = await http.Response.fromStream(streamed);
     if (res.statusCode == 200) {
-      return jsonDecode(res.body);
+      final responseData = jsonDecode(res.body);
+
+      // Update user data in SharedPreferences
+      await _updateUserDataInSharedPreferences(nama, email, telepon);
+
+      return responseData;
     } else {
       throw Exception(
         jsonDecode(res.body)['message'] ?? 'Gagal perbarui profil',
       );
+    }
+  }
+
+  // Method untuk update data user di SharedPreferences
+  Future<void> _updateUserDataInSharedPreferences(
+    String nama,
+    String email,
+    String telepon,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user');
+
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+
+        // Update nama, email, dan telepon
+        userData['nama'] = nama;
+        userData['email'] = email;
+        userData['telepon'] = telepon;
+
+        // Simpan kembali ke SharedPreferences
+        await prefs.setString('user', jsonEncode(userData));
+      }
+    } catch (e) {
+      print('Error updating user data in SharedPreferences: $e');
     }
   }
 }

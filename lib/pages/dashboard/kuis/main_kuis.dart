@@ -216,7 +216,7 @@ class _QuizPageState extends State<QuizPage> {
                                   image: NetworkImage(
                                     quiz['thumbnail'].startsWith('http')
                                         ? quiz['thumbnail']
-                                        : 'http://10.179.12.86:8000/${quiz['thumbnail']}',
+                                        : 'http://10.42.223.86:8000/${quiz['thumbnail']}',
                                   ),
                                   fit: BoxFit.cover,
                                   onError: (exception, stackTrace) {

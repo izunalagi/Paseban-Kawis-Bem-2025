@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class CategoryModulService {
-  static const String baseUrl = 'http://10.179.12.86:8000';
+  static const String baseUrl = 'http://10.42.223.86:8000';
 
   Future<List<dynamic>> fetchKategori() async {
     final token = await AuthService().getToken();

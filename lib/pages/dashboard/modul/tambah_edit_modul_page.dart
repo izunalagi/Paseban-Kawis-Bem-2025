@@ -73,10 +73,60 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
       allowedExtensions: ['pdf'],
     );
     if (result != null && result.files.single.path != null) {
-      setState(() {
-        _pdfPath = result.files.single.path;
-        _pdfName = result.files.single.name;
-      });
+      final file = File(result.files.single.path!);
+      final fileSize = await file.length();
+
+      // Validasi ukuran file (max 50MB)
+      if (fileSize > 50 * 1024 * 1024) {
+        _showFlushBar(
+          'Ukuran file PDF terlalu besar (maksimal 50MB)',
+          isError: true,
+        );
+        return;
+      }
+
+      // Validasi PDF dengan mencoba membaca file
+      try {
+        final bytes = await file.readAsBytes();
+
+        // Cek ukuran file minimal
+        if (bytes.length < 100) {
+          _showFlushBar('File PDF terlalu kecil atau rusak', isError: true);
+          return;
+        }
+
+        // Cek apakah file memiliki ekstensi .pdf
+        if (!result.files.single.name.toLowerCase().endsWith('.pdf')) {
+          _showFlushBar('File harus berformat PDF', isError: true);
+          return;
+        }
+
+        // Cek apakah PDF memiliki halaman lebih dari 1 (opsional)
+        try {
+          final pdfContent = String.fromCharCodes(bytes);
+          final pageCount = RegExp(r'/Count\s+(\d+)').firstMatch(pdfContent);
+          if (pageCount != null) {
+            final count = int.tryParse(pageCount.group(1) ?? '1');
+            if (count != null && count > 1) {
+              // Tampilkan warning untuk PDF multi-halaman
+              _showFlushBar(
+                'PDF memiliki $count halaman. Pastikan semua halaman dapat ditampilkan dengan baik.',
+                isError: false,
+              );
+            }
+          }
+        } catch (e) {
+          // Jika gagal membaca jumlah halaman, lanjutkan saja
+          print('Tidak dapat membaca jumlah halaman PDF: $e');
+        }
+
+        setState(() {
+          _pdfPath = result.files.single.path;
+          _pdfName = result.files.single.name;
+        });
+      } catch (e) {
+        _showFlushBar('Gagal membaca file PDF: $e', isError: true);
+      }
     }
   }
 
@@ -301,6 +351,19 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
                     const Text(
                       'Tekan tombol di bawah untuk mengunggah atau mengganti file PDF modul.',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: const Text(
+                        '⚠️ Catatan: PDF dengan halaman lebih dari 1 mungkin memerlukan waktu loading lebih lama. Pastikan file PDF tidak lebih dari 50MB.',
+                        style: TextStyle(fontSize: 11, color: Colors.orange),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(

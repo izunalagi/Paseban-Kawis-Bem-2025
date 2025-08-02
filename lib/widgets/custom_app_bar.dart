@@ -4,8 +4,14 @@ import '../utils/constants.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final Color? backgroundColor;
+  final bool showBackButton;
 
-  const CustomAppBar({super.key, required this.title, this.backgroundColor});
+  const CustomAppBar({
+    super.key,
+    required this.title,
+    this.backgroundColor,
+    this.showBackButton = false,
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(60);
@@ -13,9 +19,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: backgroundColor ?? AppColors.primary,
+      backgroundColor: backgroundColor ?? const Color(0xFF043461), // Warna asli
       elevation: 0,
-      automaticallyImplyLeading: false,
+      automaticallyImplyLeading: showBackButton,
+      leading: showBackButton
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            )
+          : null,
       title: Text(
         title,
         style: const TextStyle(
@@ -24,12 +36,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications, color: Colors.white),
-          onPressed: () {},
-        ),
-      ],
+      actions: showBackButton
+          ? null
+          : [
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Colors.white),
+                onPressed: () {},
+              ),
+            ],
     );
   }
 }

@@ -14,6 +14,22 @@ class QuizProvider with ChangeNotifier {
   bool isLoadingPilihan = false;
   String? errorPilihan;
 
+  List<dynamic> leaderboardList = [];
+  bool isLoadingLeaderboard = false;
+  String? errorLeaderboard;
+
+  List<dynamic> userScoresList = [];
+  bool isLoadingUserScores = false;
+  String? errorUserScores;
+
+  Map<String, dynamic>? quizResult;
+  bool isSubmittingQuiz = false;
+  String? errorSubmitQuiz;
+
+  Map<String, dynamic>? quizDetail;
+  bool isLoadingQuizDetail = false;
+  String? errorQuizDetail;
+
   final QuizService _service = QuizService();
 
   Future<void> fetchQuizList() async {
@@ -26,6 +42,19 @@ class QuizProvider with ChangeNotifier {
       error = e.toString();
     }
     isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchQuizDetail(int quizId) async {
+    isLoadingQuizDetail = true;
+    errorQuizDetail = null;
+    notifyListeners();
+    try {
+      quizDetail = await _service.fetchQuizDetail(quizId);
+    } catch (e) {
+      errorQuizDetail = e.toString();
+    }
+    isLoadingQuizDetail = false;
     notifyListeners();
   }
 
@@ -52,6 +81,51 @@ class QuizProvider with ChangeNotifier {
       errorPilihan = e.toString();
     }
     isLoadingPilihan = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchLeaderboard({int? quizId}) async {
+    isLoadingLeaderboard = true;
+    errorLeaderboard = null;
+    notifyListeners();
+    try {
+      leaderboardList = await _service.fetchLeaderboard(quizId: quizId);
+    } catch (e) {
+      errorLeaderboard = e.toString();
+    }
+    isLoadingLeaderboard = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchUserQuizScores() async {
+    isLoadingUserScores = true;
+    errorUserScores = null;
+    notifyListeners();
+    try {
+      userScoresList = await _service.fetchUserQuizScores();
+    } catch (e) {
+      errorUserScores = e.toString();
+    }
+    isLoadingUserScores = false;
+    notifyListeners();
+  }
+
+  Future<void> submitQuizAnswers({
+    required int quizId,
+    required Map<String, dynamic> answers,
+  }) async {
+    isSubmittingQuiz = true;
+    errorSubmitQuiz = null;
+    notifyListeners();
+    try {
+      quizResult = await _service.submitQuizAnswers(
+        quizId: quizId,
+        answers: answers,
+      );
+    } catch (e) {
+      errorSubmitQuiz = e.toString();
+    }
+    isSubmittingQuiz = false;
     notifyListeners();
   }
 
@@ -112,6 +186,9 @@ class QuizProvider with ChangeNotifier {
     required String title,
     required String description,
     String? thumbnailPath,
+    String? category,
+    int? maxScore,
+    int? duration,
   }) async {
     isLoading = true;
     error = null;
@@ -121,6 +198,9 @@ class QuizProvider with ChangeNotifier {
         title: title,
         description: description,
         thumbnailPath: thumbnailPath,
+        category: category,
+        maxScore: maxScore,
+        duration: duration,
       );
       await fetchQuizList();
     } catch (e) {
@@ -135,6 +215,9 @@ class QuizProvider with ChangeNotifier {
     required String title,
     required String description,
     String? thumbnailPath,
+    String? category,
+    int? maxScore,
+    int? duration,
   }) async {
     isLoading = true;
     error = null;
@@ -145,6 +228,9 @@ class QuizProvider with ChangeNotifier {
         title: title,
         description: description,
         thumbnailPath: thumbnailPath,
+        category: category,
+        maxScore: maxScore,
+        duration: duration,
       );
       await fetchQuizList();
     } catch (e) {
@@ -295,5 +381,17 @@ class QuizProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Tambah method lain (add, edit, delete) jika diperlukan
+  // Clear quiz result when starting a new quiz
+  void clearQuizResult() {
+    quizResult = null;
+    errorSubmitQuiz = null;
+    notifyListeners();
+  }
+
+  // Clear quiz detail
+  void clearQuizDetail() {
+    quizDetail = null;
+    errorQuizDetail = null;
+    notifyListeners();
+  }
 }

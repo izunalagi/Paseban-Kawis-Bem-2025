@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class ModulService {
-  static const String baseUrl = 'http://10.179.12.86:8000';
+  static const String baseUrl = 'http://10.42.223.86:8000';
 
   Future<List<dynamic>> fetchModul() async {
     final token = await AuthService().getToken();
@@ -33,6 +34,18 @@ class ModulService {
       request.fields[key] = value.toString();
     });
     if (pdfPath != null && pdfPath.isNotEmpty) {
+      // Validasi PDF sebelum upload
+      final pdfFile = File(pdfPath);
+      if (await pdfFile.exists()) {
+        final fileSize = await pdfFile.length();
+        if (fileSize > 50 * 1024 * 1024) {
+          throw Exception('Ukuran file PDF terlalu besar (maksimal 50MB)');
+        }
+        // Cek ekstensi file
+        if (!pdfPath.toLowerCase().endsWith('.pdf')) {
+          throw Exception('File harus berformat PDF');
+        }
+      }
       request.files.add(await http.MultipartFile.fromPath('pdf', pdfPath));
     }
     if (fotoPath != null && fotoPath.isNotEmpty) {
@@ -63,6 +76,18 @@ class ModulService {
       request.fields[key] = value.toString();
     });
     if (pdfPath != null && pdfPath.isNotEmpty) {
+      // Validasi PDF sebelum upload
+      final pdfFile = File(pdfPath);
+      if (await pdfFile.exists()) {
+        final fileSize = await pdfFile.length();
+        if (fileSize > 50 * 1024 * 1024) {
+          throw Exception('Ukuran file PDF terlalu besar (maksimal 50MB)');
+        }
+        // Cek ekstensi file
+        if (!pdfPath.toLowerCase().endsWith('.pdf')) {
+          throw Exception('File harus berformat PDF');
+        }
+      }
       request.files.add(await http.MultipartFile.fromPath('pdf', pdfPath));
     }
     if (fotoPath != null && fotoPath.isNotEmpty) {
@@ -85,6 +110,33 @@ class ModulService {
     );
     if (res.statusCode != 200) {
       throw Exception(jsonDecode(res.body)['message'] ?? 'Gagal hapus modul');
+    }
+  }
+
+  Future<void> recordModuleAccess(int modulId) async {
+    final token = await AuthService().getToken();
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/modul/$modulId/access'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Gagal mencatat akses modul');
+    }
+  }
+
+  Future<List<dynamic>> getRecentlyAccessed() async {
+    final token = await AuthService().getToken();
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/modul/recently-accessed'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    } else {
+      throw Exception('Gagal mengambil modul terakhir diakses');
     }
   }
 }

@@ -3,8 +3,9 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class QuizService {
-  static const String baseUrl = 'http://10.179.12.86:8000';
+  static const String baseUrl = 'http://10.42.223.86:8000';
 
+  // Get all quizzes (listQuiz method in PHP)
   Future<List<dynamic>> fetchQuizList() async {
     try {
       final token = await AuthService().getToken();
@@ -14,14 +15,33 @@ class QuizService {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        return data['quizzes'] ?? [];
+        return data['quizzes'] ?? data ?? [];
       }
       throw Exception('Gagal mengambil data kuis');
     } catch (e) {
-      throw Exception('Gagal mengambil data kuis');
+      throw Exception('Gagal mengambil data kuis: $e');
     }
   }
 
+  // Get quiz detail with total questions (getQuizDetail method in PHP)
+  Future<Map<String, dynamic>> fetchQuizDetail(int quizId) async {
+    try {
+      final token = await AuthService().getToken();
+      final res = await http.get(
+        Uri.parse('$baseUrl/api/quiz/$quizId/detail'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['quiz'] ?? {};
+      }
+      throw Exception('Gagal mengambil detail kuis');
+    } catch (e) {
+      throw Exception('Gagal mengambil detail kuis: $e');
+    }
+  }
+
+  // Get questions for a specific quiz (getQuestions method in PHP)
   Future<List<dynamic>> fetchSoalList(int quizId) async {
     try {
       final token = await AuthService().getToken();
@@ -31,14 +51,15 @@ class QuizService {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        return data['questions'] ?? [];
+        return data['questions'] ?? data ?? [];
       }
       throw Exception('Gagal mengambil data soal');
     } catch (e) {
-      throw Exception('Gagal mengambil data soal');
+      throw Exception('Gagal mengambil data soal: $e');
     }
   }
 
+  // Get options for a specific question (not directly in PHP, but options come with questions)
   Future<List<dynamic>> fetchPilihanList(int questionId) async {
     try {
       final token = await AuthService().getToken();
@@ -48,18 +69,87 @@ class QuizService {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        return data['options'] ?? [];
+        return data['options'] ?? data ?? [];
       }
       throw Exception('Gagal mengambil data pilihan');
     } catch (e) {
-      throw Exception('Gagal mengambil data pilihan');
+      throw Exception('Gagal mengambil data pilihan: $e');
     }
   }
 
+  // Get leaderboard (getLeaderboard method in PHP)
+  Future<List<dynamic>> fetchLeaderboard({int? quizId}) async {
+    try {
+      final token = await AuthService().getToken();
+      final url = quizId != null
+          ? '$baseUrl/api/quiz/$quizId/leaderboard'
+          : '$baseUrl/api/leaderboard';
+      final res = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['leaderboard'] ?? data ?? [];
+      }
+      throw Exception('Gagal mengambil data leaderboard');
+    } catch (e) {
+      throw Exception('Gagal mengambil data leaderboard: $e');
+    }
+  }
+
+  // Get user quiz scores (getUserQuizScores method in PHP)
+  Future<List<dynamic>> fetchUserQuizScores() async {
+    try {
+      final token = await AuthService().getToken();
+      final res = await http.get(
+        Uri.parse('$baseUrl/api/user/quiz-scores'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['quiz_scores'] ?? data ?? [];
+      }
+      throw Exception('Gagal mengambil data skor kuis user');
+    } catch (e) {
+      throw Exception('Gagal mengambil data skor kuis user: $e');
+    }
+  }
+
+  // Submit quiz answers (submitAnswers method in PHP)
+  Future<Map<String, dynamic>> submitQuizAnswers({
+    required int quizId,
+    required Map<String, dynamic> answers,
+  }) async {
+    try {
+      final token = await AuthService().getToken();
+      final res = await http.post(
+        Uri.parse('$baseUrl/api/quiz/$quizId/submit'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'answers': answers}),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      throw Exception(
+        jsonDecode(res.body)['message'] ?? 'Gagal submit jawaban kuis',
+      );
+    } catch (e) {
+      throw Exception('Gagal submit jawaban kuis: $e');
+    }
+  }
+
+  // Create quiz (store method in PHP)
   Future<Map<String, dynamic>> addQuiz({
     required String title,
     required String description,
     String? thumbnailPath,
+    String? category,
+    int? maxScore,
+    int? duration,
   }) async {
     try {
       final token = await AuthService().getToken();
@@ -68,6 +158,9 @@ class QuizService {
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['title'] = title;
       request.fields['description'] = description;
+      if (category != null) request.fields['category'] = category;
+      if (maxScore != null) request.fields['max_score'] = maxScore.toString();
+      if (duration != null) request.fields['duration'] = duration.toString();
 
       if (thumbnailPath != null) {
         request.files.add(
@@ -89,6 +182,64 @@ class QuizService {
     }
   }
 
+  // Update quiz (update method in PHP)
+  Future<Map<String, dynamic>> editQuiz({
+    required int quizId,
+    required String title,
+    required String description,
+    String? thumbnailPath,
+    String? category,
+    int? maxScore,
+    int? duration,
+  }) async {
+    try {
+      final token = await AuthService().getToken();
+      var uri = Uri.parse('$baseUrl/api/quiz/$quizId');
+      var request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['title'] = title;
+      request.fields['description'] = description;
+      if (category != null) request.fields['category'] = category;
+      if (maxScore != null) request.fields['max_score'] = maxScore.toString();
+      if (duration != null) request.fields['duration'] = duration.toString();
+
+      if (thumbnailPath != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('thumbnail', thumbnailPath),
+        );
+      }
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        return jsonDecode(responseBody);
+      }
+      throw Exception(jsonDecode(responseBody)['message'] ?? 'Gagal ubah kuis');
+    } catch (e) {
+      throw Exception('Gagal ubah kuis: $e');
+    }
+  }
+
+  // Delete quiz (destroy method in PHP)
+  Future<void> deleteQuiz(int quizId) async {
+    try {
+      final token = await AuthService().getToken();
+      final res = await http.delete(
+        Uri.parse('$baseUrl/api/quiz/$quizId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (res.statusCode != 200) {
+        final errorBody = jsonDecode(res.body);
+        throw Exception(errorBody['message'] ?? 'Gagal hapus kuis');
+      }
+    } catch (e) {
+      throw Exception('Gagal hapus kuis: $e');
+    }
+  }
+
+  // Add question to quiz (addQuestion method in PHP)
   Future<Map<String, dynamic>> addSoal({
     required int quizId,
     required String questionText,
@@ -113,6 +264,54 @@ class QuizService {
     }
   }
 
+  // Update question (updateQuestion method in PHP)
+  Future<Map<String, dynamic>> editSoal({
+    required int questionId,
+    required int quizId,
+    required String questionText,
+  }) async {
+    try {
+      final token = await AuthService().getToken();
+
+      final res = await http.post(
+        Uri.parse('$baseUrl/api/quiz/questions/$questionId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'question_text': questionText}),
+      );
+
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+
+      final errorBody = jsonDecode(res.body);
+      throw Exception(errorBody['message'] ?? 'Gagal ubah soal');
+    } catch (e) {
+      throw Exception('Gagal ubah soal: $e');
+    }
+  }
+
+  // Delete question (destroyQuestion method in PHP)
+  Future<void> deleteSoal(int questionId) async {
+    try {
+      final token = await AuthService().getToken();
+      final res = await http.delete(
+        Uri.parse('$baseUrl/api/quiz/questions/$questionId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (res.statusCode != 200) {
+        final errorBody = jsonDecode(res.body);
+        throw Exception(errorBody['message'] ?? 'Gagal hapus soal');
+      }
+    } catch (e) {
+      throw Exception('Gagal hapus soal: $e');
+    }
+  }
+
+  // Add option to question (addOption method in PHP)
   Future<Map<String, dynamic>> addPilihan({
     required int questionId,
     required String optionLabel,
@@ -146,83 +345,7 @@ class QuizService {
     }
   }
 
-  Future<Map<String, dynamic>> editQuiz({
-    required int quizId,
-    required String title,
-    required String description,
-    String? thumbnailPath,
-  }) async {
-    try {
-      final token = await AuthService().getToken();
-      print('DEBUG: Editing quiz $quizId');
-      print('DEBUG: Title: $title');
-      print('DEBUG: Description: $description');
-      print('DEBUG: ThumbnailPath: $thumbnailPath');
-
-      // Gunakan POST method tanpa _method field
-      var uri = Uri.parse('$baseUrl/api/quiz/$quizId');
-      var request = http.MultipartRequest('POST', uri);
-      request.headers['Authorization'] = 'Bearer $token';
-      request.fields['title'] = title;
-      request.fields['description'] = description;
-
-      if (thumbnailPath != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('thumbnail', thumbnailPath),
-        );
-        print('DEBUG: Added thumbnail file');
-      } else {
-        print('DEBUG: No thumbnail file');
-      }
-
-      print('DEBUG: Request fields: ${request.fields}');
-      print('DEBUG: Request files count: ${request.files.length}');
-      print('DEBUG: Request URL: ${request.url}');
-
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-
-      print('DEBUG: Response status: ${response.statusCode}');
-      print('DEBUG: Response body: $responseBody');
-
-      if (response.statusCode == 200) {
-        return jsonDecode(responseBody);
-      }
-      throw Exception(jsonDecode(responseBody)['message'] ?? 'Gagal ubah kuis');
-    } catch (e) {
-      print('DEBUG: Error in editQuiz: $e');
-      throw Exception('Gagal ubah kuis: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> editSoal({
-    required int questionId,
-    required int quizId,
-    required String questionText,
-  }) async {
-    try {
-      final token = await AuthService().getToken();
-
-      final res = await http.post(
-        Uri.parse('$baseUrl/api/quiz/questions/$questionId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'question_text': questionText}),
-      );
-
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body);
-      }
-
-      final errorBody = jsonDecode(res.body);
-      throw Exception(errorBody['message'] ?? 'Gagal ubah soal');
-    } catch (e) {
-      throw Exception('Gagal ubah soal: $e');
-    }
-  }
-
+  // Update option (updateOption method in PHP)
   Future<Map<String, dynamic>> editPilihan({
     required int optionId,
     required int questionId,
@@ -258,49 +381,7 @@ class QuizService {
     }
   }
 
-  Future<void> deleteQuiz(int quizId) async {
-    try {
-      final token = await AuthService().getToken();
-      print('DEBUG: Deleting quiz $quizId with token: $token');
-
-      final res = await http.delete(
-        Uri.parse('$baseUrl/api/quiz/$quizId'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      print('DEBUG: Delete response status: ${res.statusCode}');
-      print('DEBUG: Delete response body: ${res.body}');
-
-      if (res.statusCode != 200) {
-        final errorBody = jsonDecode(res.body);
-        throw Exception(errorBody['message'] ?? 'Gagal hapus kuis');
-      }
-    } catch (e) {
-      throw Exception('Gagal hapus kuis: $e');
-    }
-  }
-
-  Future<void> deleteSoal(int questionId) async {
-    try {
-      final token = await AuthService().getToken();
-      final res = await http.delete(
-        Uri.parse('$baseUrl/api/quiz/questions/$questionId'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      print('DEBUG: Delete question response status: ${res.statusCode}');
-      print('DEBUG: Delete question response body: ${res.body}');
-
-      if (res.statusCode != 200) {
-        final errorBody = jsonDecode(res.body);
-        print('DEBUG: Delete question error body: $errorBody');
-        throw Exception(errorBody['message'] ?? 'Gagal hapus soal');
-      }
-    } catch (e) {
-      throw Exception('Gagal hapus soal: $e');
-    }
-  }
-
+  // Delete option (destroyOption method in PHP)
   Future<void> deletePilihan(int optionId) async {
     try {
       final token = await AuthService().getToken();
@@ -309,18 +390,12 @@ class QuizService {
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      print('DEBUG: Delete option response status: ${res.statusCode}');
-      print('DEBUG: Delete option response body: ${res.body}');
-
       if (res.statusCode != 200) {
         final errorBody = jsonDecode(res.body);
-        print('DEBUG: Delete option error body: $errorBody');
         throw Exception(errorBody['message'] ?? 'Gagal hapus pilihan');
       }
     } catch (e) {
       throw Exception('Gagal hapus pilihan: $e');
     }
   }
-
-  // Tambah method addQuiz, editQuiz, deleteQuiz jika diperlukan
 }
