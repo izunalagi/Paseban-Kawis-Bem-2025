@@ -112,7 +112,7 @@ class QuizProvider with ChangeNotifier {
 
   Future<void> submitQuizAnswers({
     required int quizId,
-    required Map<String, dynamic> answers,
+    required List<Map<String, dynamic>> answers,
   }) async {
     isSubmittingQuiz = true;
     errorSubmitQuiz = null;

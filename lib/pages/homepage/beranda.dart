@@ -1013,10 +1013,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider.value(
-                  value: Provider.of<QuizProvider>(context, listen: false),
-                  child: QuizDetailPage(quiz: quiz),
-                ),
+                builder: (context) => QuizDetailPage(quiz: quiz),
               ),
             );
           },

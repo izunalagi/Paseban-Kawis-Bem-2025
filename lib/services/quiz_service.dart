@@ -119,10 +119,13 @@ class QuizService {
   // Submit quiz answers (submitAnswers method in PHP)
   Future<Map<String, dynamic>> submitQuizAnswers({
     required int quizId,
-    required Map<String, dynamic> answers,
+    required List<Map<String, dynamic>> answers,
   }) async {
     try {
       final token = await AuthService().getToken();
+      final requestBody = {'answers': answers};
+      print('Debug - Request body:');
+      print(jsonEncode(requestBody));
       final res = await http.post(
         Uri.parse('$baseUrl/api/quiz/$quizId/submit'),
         headers: {

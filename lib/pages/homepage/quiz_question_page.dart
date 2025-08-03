@@ -4,6 +4,7 @@ import '../../providers/quiz_provider.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_widget.dart';
 import '../../utils/constants.dart';
+import 'quiz_review_page.dart';
 
 class QuizQuestionPage extends StatefulWidget {
   final Map<String, dynamic> quiz;
@@ -56,27 +57,34 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
     }
   }
 
-  void _selectAnswer(String optionId, bool isCorrect) {
+  void _selectAnswer(String optionId) {
     if (currentQuestionIndex < questions.length) {
-      // Check if question already answered
-      bool alreadyAnswered = answers.any(
-        (answer) =>
-            answer['questionId'] == questions[currentQuestionIndex]['id'],
-      );
+      setState(() {
+        // Find existing answer for current question
+        int existingAnswerIndex = answers.indexWhere(
+          (answer) =>
+              answer['questionId'] == questions[currentQuestionIndex]['id'],
+        );
 
-      if (!alreadyAnswered) {
-        setState(() {
+        // If tapping the same option, remove the answer (deselect)
+        if (existingAnswerIndex != -1 &&
+            answers[existingAnswerIndex]['selectedOptionId'] == optionId) {
+          answers.removeAt(existingAnswerIndex);
+        }
+        // If selecting a different option or first time selecting
+        else {
+          // Remove old answer if exists
+          if (existingAnswerIndex != -1) {
+            answers.removeAt(existingAnswerIndex);
+          }
+
+          // Add new answer
           answers.add({
             'questionId': questions[currentQuestionIndex]['id'],
             'selectedOptionId': optionId,
-            'isCorrect': isCorrect,
           });
-
-          if (isCorrect) {
-            score++;
-          }
-        });
-      }
+        }
+      });
     }
   }
 
@@ -106,12 +114,41 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
     try {
       final quizProvider = Provider.of<QuizProvider>(context, listen: false);
 
-      // Prepare answers in the format expected by the backend
-      Map<String, dynamic> answersToSubmit = {};
+      // Debug print for answers
+      print('Debug - All Answers:');
       for (var answer in answers) {
-        answersToSubmit[answer['questionId'].toString()] =
-            answer['selectedOptionId'];
+        print('Question ID: ${answer['questionId']}');
+        print('Selected Option: ${answer['selectedOptionId']}');
+        print('Is Correct: ${answer['isCorrect']}');
       }
+
+      // Prepare answers in the format expected by the backend (list of maps)
+      List<Map<String, dynamic>> answersToSubmit = answers.map((answer) {
+        final question = questions.firstWhere(
+          (q) => q['id'].toString() == answer['questionId'].toString(),
+          orElse: () => null,
+        );
+        String? selectedLabel;
+        if (question != null && question['options'] != null) {
+          final option = (question['options'] as List).firstWhere(
+            (opt) =>
+                opt['id'].toString() == answer['selectedOptionId'].toString(),
+            orElse: () => null,
+          );
+          if (option != null) {
+            selectedLabel = option['option_label']?.toString();
+          }
+        }
+        return {
+          'question_id': int.parse(answer['questionId'].toString()),
+          'selected_option': selectedLabel ?? '',
+        };
+      }).toList();
+
+      // Debug print for submission data
+      print('Debug - Submitting Quiz:');
+      print('Quiz ID: ${widget.quiz['id']}');
+      print('Answers to submit: $answersToSubmit');
 
       await quizProvider.submitQuizAnswers(
         quizId: widget.quiz['id'],
@@ -124,11 +161,37 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
           score = quizProvider.quizResult!['score'] ?? score;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Debug - Error submitting quiz:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal submit kuis: $e'),
+          duration: Duration(seconds: 5),
           backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Detail',
+            textColor: Colors.white,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Detail Error'),
+                  content: SingleChildScrollView(
+                    child: Text('$e\n\nStack Trace:\n$stackTrace'),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Tutup'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       );
     }
@@ -203,231 +266,246 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
         title: 'Kuis: ${widget.quiz['judul'] ?? 'Quiz'}',
         showBackButton: true,
       ),
-      body: Column(
-        children: [
-          // Progress Bar
-          Container(
-            padding: EdgeInsets.all(16),
-            color: Colors.white,
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Soal ${currentQuestionIndex + 1} dari $totalQuestions',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    Text(
-                      'Skor: $score/$totalQuestions',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (currentQuestionIndex + 1) / totalQuestions,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                ),
-              ],
-            ),
-          ),
-
-          // Question Content
-          Expanded(
-            child: SingleChildScrollView(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Progress Bar
+            Container(
               padding: EdgeInsets.all(16),
+              color: Colors.white,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Question Text
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.quiz,
-                                color: AppColors.accent,
-                                size: 20,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Pertanyaan ${currentQuestionIndex + 1}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accent,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          currentQuestion['question_text'] ??
-                              'Pertanyaan tidak tersedia',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 24),
-
-                  // Options
-                  Text(
-                    'Pilih jawaban yang benar:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-
-                  ...options.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final option = entry.value;
-                    final optionId = option['id']?.toString() ?? '';
-                    final optionText = option['option_text'] ?? '';
-                    final optionLabel = option['option_label'] ?? '';
-                    final isCorrect = option['is_correct'] == true;
-                    final isSelected = selectedAnswer == optionId;
-
-                    return Container(
-                      margin: EdgeInsets.only(bottom: 12),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: isAnswered
-                              ? null
-                              : () {
-                                  _selectAnswer(optionId, isCorrect);
-                                },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? (isCorrect
-                                        ? Colors.green[50]
-                                        : Colors.red[50])
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isSelected
-                                    ? (isCorrect ? Colors.green : Colors.red)
-                                    : Colors.grey[300]!,
-                                width: isSelected ? 2 : 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isSelected
-                                        ? (isCorrect
-                                              ? Colors.green
-                                              : Colors.red)
-                                        : Colors.grey[300],
-                                  ),
-                                  child: isSelected
-                                      ? Icon(
-                                          isCorrect ? Icons.check : Icons.close,
-                                          color: Colors.white,
-                                          size: 16,
-                                        )
-                                      : Text(
-                                          optionLabel,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey[600],
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    optionText,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black87,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Soal ${currentQuestionIndex + 1} dari $totalQuestions',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
                         ),
                       ),
-                    );
-                  }).toList(),
-
-                  SizedBox(height: 32),
+                      Text(
+                        'Skor: $score/$totalQuestions',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: (currentQuestionIndex + 1) / totalQuestions,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  ),
                 ],
               ),
             ),
-          ),
 
-          // Navigation Buttons
-          Container(
-            padding: EdgeInsets.all(16),
-            color: Colors.white,
-            child: Row(
-              children: [
-                if (currentQuestionIndex > 0)
+            // Question Content & Options (scrollable only this part)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Question Text
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.quiz,
+                                  color: AppColors.accent,
+                                  size: 20,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                'Pertanyaan ${currentQuestionIndex + 1}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            currentQuestion['question_text'] ??
+                                'Pertanyaan tidak tersedia',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 24),
+
+                    // Options
+                    Text(
+                      'Pilih jawaban yang benar:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    ...options.asMap().entries.map((entry) {
+                      final option = entry.value;
+                      final optionId = option['id']?.toString() ?? '';
+                      final optionText = option['option_text'] ?? '';
+                      final optionLabel = option['option_label'] ?? '';
+                      final isSelected = selectedAnswer == optionId;
+
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 12),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              _selectAnswer(optionId);
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.accent.withOpacity(0.1)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.accent
+                                      : Colors.grey[300]!,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isSelected
+                                          ? AppColors.accent
+                                          : Colors.grey[300],
+                                    ),
+                                    child: isSelected
+                                        ? Icon(
+                                            Icons.check,
+                                            color: Colors.white,
+                                            size: 16,
+                                          )
+                                        : Text(
+                                            optionLabel,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey[600],
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      optionText,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+
+                    SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+
+            // Navigation Buttons (sticky at bottom)
+            Container(
+              padding: EdgeInsets.all(16),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  if (currentQuestionIndex > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _previousQuestion,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_back, size: 20),
+                            SizedBox(width: 8),
+                            Text('Sebelumnya'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (currentQuestionIndex > 0) SizedBox(width: 12),
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: _previousQuestion,
-                      style: OutlinedButton.styleFrom(
+                    child: ElevatedButton(
+                      onPressed: isAnswered ? _nextQuestion : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -436,45 +514,24 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.arrow_back, size: 20),
-                          SizedBox(width: 8),
-                          Text('Sebelumnya'),
+                          Text(
+                            currentQuestionIndex == questions.length - 1
+                                ? 'Selesai'
+                                : 'Selanjutnya',
+                          ),
+                          if (currentQuestionIndex < questions.length - 1) ...[
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward, size: 20),
+                          ],
                         ],
                       ),
                     ),
                   ),
-                if (currentQuestionIndex > 0) SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: isAnswered ? _nextQuestion : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          currentQuestionIndex == questions.length - 1
-                              ? 'Selesai'
-                              : 'Selanjutnya',
-                        ),
-                        if (currentQuestionIndex < questions.length - 1) ...[
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -711,13 +768,18 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          setState(() {
-                            currentQuestionIndex = 0;
-                            answers.clear();
-                            score = 0;
-                            isQuizCompleted = false;
-                          });
-                          quizProvider.clearQuizResult();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => QuizReviewPage(
+                                questions: questions,
+                                userAnswers: answers,
+                                quiz: widget.quiz, // Pass quiz data
+                                quizResult:
+                                    quizProvider.quizResult, // Pass quiz result
+                              ),
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
@@ -727,7 +789,7 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: Text('Coba Lagi'),
+                        child: Text('Review Jawaban'),
                       ),
                     ),
                   ],

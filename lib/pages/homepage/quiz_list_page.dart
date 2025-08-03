@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/quiz_provider.dart';
+import '../../services/quiz_service.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_search_bar.dart';
 import '../../widgets/loading_widget.dart';
 import '../../utils/constants.dart';
 import 'quiz_detail_page.dart';
@@ -15,9 +13,11 @@ class QuizListPage extends StatefulWidget {
 }
 
 class _QuizListPageState extends State<QuizListPage> {
-  List<dynamic> filteredQuizzes = [];
-  String searchQuery = '';
-  Map<int, int> quizQuestionCounts = {};
+  List<dynamic> _allQuizzes = [];
+  List<dynamic> _filteredQuizzes = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -25,101 +25,197 @@ class _QuizListPageState extends State<QuizListPage> {
     _loadQuizzes();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadQuizzes() async {
-    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
-    await quizProvider.fetchQuizList();
-    _filterQuizzes();
-    _loadQuestionCounts();
-  }
+    if (!mounted) return;
 
-  void _filterQuizzes() {
-    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
-    final allQuizzes = quizProvider.quizList;
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (searchQuery.isEmpty) {
-      setState(() {
-        filteredQuizzes = List.from(allQuizzes);
-      });
-    } else {
-      setState(() {
-        filteredQuizzes = allQuizzes.where((quiz) {
-          final title = quiz['judul']?.toString().toLowerCase() ?? '';
-          final category = quiz['kategori']?.toString().toLowerCase() ?? '';
-          final description = quiz['deskripsi']?.toString().toLowerCase() ?? '';
-          final query = searchQuery.toLowerCase();
+    try {
+      final quizService = QuizService();
+      final quizData = await quizService.fetchQuizList();
 
-          return title.contains(query) ||
-              category.contains(query) ||
-              description.contains(query);
-        }).toList();
-      });
-    }
-  }
-
-  Future<void> _loadQuestionCounts() async {
-    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
-
-    for (var quiz in filteredQuizzes) {
-      try {
-        await quizProvider.fetchQuizDetail(quiz['id']);
+      if (mounted) {
         setState(() {
-          quizQuestionCounts[quiz['id']] =
-              quizProvider.quizDetail?['total_questions'] ?? 0;
+          _allQuizzes = quizData ?? [];
+          _filteredQuizzes = List.from(_allQuizzes);
+          _isLoading = false;
         });
-      } catch (e) {
-        // If failed to load question count, set to 0
+        print('Loaded ${_allQuizzes.length} quizzes');
+        // Debug: print first quiz structure
+        if (_allQuizzes.isNotEmpty) {
+          print('First quiz data: ${_allQuizzes[0]}');
+        }
+      }
+    } catch (e) {
+      print('Error loading quizzes: $e');
+      if (mounted) {
         setState(() {
-          quizQuestionCounts[quiz['id']] = 0;
+          _allQuizzes = [];
+          _filteredQuizzes = [];
+          _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat daftar kuis: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Coba Lagi',
+              textColor: Colors.white,
+              onPressed: _loadQuizzes,
+            ),
+          ),
+        );
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<QuizProvider>(
-      builder: (context, quizProvider, child) {
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: CustomAppBar(title: 'Daftar Kuis', showBackButton: true),
-          body: Column(
-            children: [
-              // Search Bar
-              Container(
-                padding: EdgeInsets.all(16),
-                color: Colors.white,
-                child: CustomSearchBar(
-                  hintText: 'Cari kuis...',
-                  onChanged: (value) {
-                    setState(() {
-                      searchQuery = value;
-                    });
-                    _filterQuizzes();
-                  },
-                ),
-              ),
+  void _filterQuizzes(String query) {
+    if (!mounted) return;
 
-              // Quiz List
-              Expanded(
-                child: quizProvider.isLoading
-                    ? LoadingWidget()
-                    : filteredQuizzes.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: _loadQuizzes,
-                        child: ListView.builder(
-                          padding: EdgeInsets.all(16),
-                          itemCount: filteredQuizzes.length,
-                          itemBuilder: (context, index) {
-                            return _buildQuizCard(filteredQuizzes[index]);
-                          },
-                        ),
-                      ),
-              ),
-            ],
+    setState(() {
+      _searchQuery = query;
+
+      if (query.isEmpty) {
+        _filteredQuizzes = List.from(_allQuizzes);
+      } else {
+        _filteredQuizzes = _allQuizzes.where((quiz) {
+          // Coba berbagai kemungkinan field name
+          final title = (quiz['title'] ?? quiz['judul'] ?? quiz['nama'] ?? '')
+              .toString()
+              .toLowerCase();
+          final description =
+              (quiz['description'] ?? quiz['deskripsi'] ?? quiz['desc'] ?? '')
+                  .toString()
+                  .toLowerCase();
+          final category = (quiz['category'] ?? quiz['kategori'] ?? '')
+              .toString()
+              .toLowerCase();
+          final queryLower = query.toLowerCase();
+
+          return title.contains(queryLower) ||
+              description.contains(queryLower) ||
+              category.contains(queryLower);
+        }).toList();
+      }
+    });
+
+    print('Search query: $query, Found: ${_filteredQuizzes.length} results');
+  }
+
+  Future<void> _refreshQuizzes() async {
+    await _loadQuizzes();
+  }
+
+  void _navigateToQuizDetail(dynamic quiz) {
+    if (!mounted || quiz == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => QuizDetailPage(quiz: quiz)),
+    ).catchError((error) {
+      print('Navigation error: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terjadi kesalahan saat membuka detail kuis'),
+            backgroundColor: Colors.red,
           ),
         );
-      },
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: const CustomAppBar(title: 'Daftar Kuis', showBackButton: true),
+      body: _isLoading
+          ? const LoadingWidget(message: 'Memuat daftar kuis...')
+          : Column(
+              children: [
+                // Search Bar - Only show when not loading
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.white,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _filterQuizzes,
+                    decoration: InputDecoration(
+                      hintText: 'Cari kuis...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppColors.textSecondary,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                color: AppColors.textSecondary,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filterQuizzes('');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.accent),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Quiz List
+                Expanded(child: _buildQuizList()),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildQuizList() {
+    // Remove the loading check here since it's handled in main build method
+    if (_allQuizzes.isEmpty && !_isLoading) {
+      return _buildEmptyState();
+    }
+
+    if (_filteredQuizzes.isEmpty && _searchQuery.isNotEmpty) {
+      return _buildNoSearchResults();
+    }
+
+    return RefreshIndicator(
+      onRefresh: _refreshQuizzes,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _filteredQuizzes.length,
+        itemBuilder: (context, index) {
+          final quiz = _filteredQuizzes[index];
+          return _buildQuizCard(quiz);
+        },
+      ),
     );
   }
 
@@ -128,29 +224,69 @@ class _QuizListPageState extends State<QuizListPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            searchQuery.isEmpty ? Icons.quiz_outlined : Icons.search_off,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          SizedBox(height: 16),
+          Icon(Icons.quiz_outlined, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
           Text(
-            searchQuery.isEmpty
-                ? 'Belum ada kuis tersedia'
-                : 'Tidak ada kuis yang sesuai',
+            'Belum ada kuis tersedia',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Colors.grey[600],
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            searchQuery.isEmpty
-                ? 'Silakan hubungi admin untuk menambahkan kuis'
-                : 'Coba ubah kata kunci pencarian Anda',
+            'Silakan hubungi admin untuk menambahkan kuis',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadQuizzes,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Muat Ulang'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSearchResults() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Tidak ada kuis yang sesuai',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Coba ubah kata kunci pencarian: "$_searchQuery"',
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              _searchController.clear();
+              _filterQuizzes('');
+            },
+            child: const Text('Hapus Filter'),
           ),
         ],
       ),
@@ -158,10 +294,50 @@ class _QuizListPageState extends State<QuizListPage> {
   }
 
   Widget _buildQuizCard(dynamic quiz) {
-    final questionCount = quizQuestionCounts[quiz['id']] ?? 0;
+    if (quiz == null) return const SizedBox.shrink();
+
+    // Debug: print quiz data structure
+    print('Quiz card data: $quiz');
+
+    // Coba berbagai kemungkinan field name untuk title
+    final title =
+        quiz['title']?.toString() ??
+        quiz['judul']?.toString() ??
+        quiz['nama']?.toString() ??
+        'Judul Tidak Tersedia';
+
+    // Coba berbagai kemungkinan field name untuk description
+    final description =
+        quiz['description']?.toString() ??
+        quiz['deskripsi']?.toString() ??
+        quiz['desc']?.toString() ??
+        '';
+
+    // Coba berbagai kemungkinan field name untuk category
+    final category =
+        quiz['category']?.toString() ?? quiz['kategori']?.toString() ?? 'Umum';
+
+    // Coba berbagai kemungkinan field name untuk thumbnail
+    final thumbnail =
+        quiz['thumbnail']?.toString() ??
+        quiz['image']?.toString() ??
+        quiz['foto']?.toString() ??
+        '';
+
+    final duration =
+        quiz['durasi']?.toString() ?? quiz['duration']?.toString() ?? '';
+
+    String imageUrl = '';
+    if (thumbnail.isNotEmpty) {
+      if (thumbnail.startsWith('http')) {
+        imageUrl = thumbnail;
+      } else {
+        imageUrl = 'http://10.42.223.86:8000/$thumbnail';
+      }
+    }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -169,7 +345,7 @@ class _QuizListPageState extends State<QuizListPage> {
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -177,20 +353,10 @@ class _QuizListPageState extends State<QuizListPage> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider.value(
-                  value: Provider.of<QuizProvider>(context, listen: false),
-                  child: QuizDetailPage(quiz: quiz),
-                ),
-              ),
-            );
-          },
+          onTap: () => _navigateToQuizDetail(quiz),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 // Quiz Thumbnail
@@ -203,31 +369,38 @@ class _QuizListPageState extends State<QuizListPage> {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
                         blurRadius: 4,
-                        offset: Offset(0, 2),
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      quiz['thumbnail'].startsWith('http')
-                          ? quiz['thumbnail']
-                          : 'http://10.42.223.86:8000/${quiz['thumbnail']}',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: Icon(
-                            Icons.image_not_supported,
-                            size: 30,
-                            color: Colors.grey[600],
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppColors.accent.withOpacity(0.1),
+                                child: Icon(
+                                  Icons.quiz,
+                                  size: 30,
+                                  color: AppColors.accent,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: AppColors.accent.withOpacity(0.1),
+                            child: Icon(
+                              Icons.quiz,
+                              size: 30,
+                              color: AppColors.accent,
+                            ),
                           ),
-                        );
-                      },
-                    ),
                   ),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
 
                 // Quiz Info
                 Expanded(
@@ -235,8 +408,8 @@ class _QuizListPageState extends State<QuizListPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        quiz['judul'] ?? 'Judul Kuis',
-                        style: TextStyle(
+                        title,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -244,11 +417,10 @@ class _QuizListPageState extends State<QuizListPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4),
-                      if (quiz['deskripsi'] != null &&
-                          quiz['deskripsi'].isNotEmpty)
+                      const SizedBox(height: 4),
+                      if (description.isNotEmpty)
                         Text(
-                          quiz['deskripsi'],
+                          description,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -256,28 +428,22 @@ class _QuizListPageState extends State<QuizListPage> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      SizedBox(height: 8),
-                      Row(
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
                           _buildInfoChip(
-                            Icons.quiz,
-                            '$questionCount soal',
-                            AppColors.accent,
-                          ),
-                          SizedBox(width: 8),
-                          _buildInfoChip(
                             Icons.category,
-                            quiz['kategori'] ?? 'Umum',
+                            category,
                             Colors.blue[600]!,
                           ),
-                          if (quiz['durasi'] != null) ...[
-                            SizedBox(width: 8),
+                          if (duration.isNotEmpty)
                             _buildInfoChip(
                               Icons.timer,
-                              '${quiz['durasi']} menit',
+                              '$duration menit',
                               Colors.orange[600]!,
                             ),
-                          ],
                         ],
                       ),
                     ],
@@ -300,7 +466,7 @@ class _QuizListPageState extends State<QuizListPage> {
 
   Widget _buildInfoChip(IconData icon, String label, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -310,7 +476,7 @@ class _QuizListPageState extends State<QuizListPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
-          SizedBox(width: 4),
+          const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
