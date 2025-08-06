@@ -9,12 +9,12 @@ class QuizReviewPage extends StatelessWidget {
   final Map<String, dynamic>? quizResult; // Quiz result data
 
   const QuizReviewPage({
-    Key? key,
+    super.key,
     required this.questions,
     required this.userAnswers,
     this.quiz,
     this.quizResult,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +418,7 @@ class QuizReviewPage extends StatelessWidget {
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 );

@@ -13,8 +13,7 @@ class PdfViewerPage extends StatefulWidget {
   final String pdfUrl;
   final String title;
 
-  const PdfViewerPage({Key? key, required this.pdfUrl, required this.title})
-    : super(key: key);
+  const PdfViewerPage({super.key, required this.pdfUrl, required this.title});
 
   @override
   State<PdfViewerPage> createState() => _PdfViewerPageState();
@@ -43,7 +42,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
 
       String fullUrl = widget.pdfUrl;
       if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
-        fullUrl = 'http://10.42.223.86:8000/$fullUrl';
+        fullUrl = 'https://pasebankawis.himatifunej.com/$fullUrl';
       }
 
       print('Loading PDF from: $fullUrl');
@@ -150,7 +149,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
       // Untuk sementara, buka PDF di aplikasi eksternal sebagai download
       String fullUrl = widget.pdfUrl;
       if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
-        fullUrl = 'http://10.42.223.86:8000/$fullUrl';
+        fullUrl = 'https://pasebankawis.himatifunej.com/$fullUrl';
       }
 
       final uri = Uri.parse(fullUrl);

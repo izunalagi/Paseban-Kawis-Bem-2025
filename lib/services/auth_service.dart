@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://10.42.223.86:8000';
+  static const String baseUrl = 'https://pasebankawis.himatifunej.com';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
@@ -15,8 +15,17 @@ class AuthService {
           )
           .timeout(const Duration(seconds: 10));
 
+      print("📊 Response status: ${response.statusCode}");
+      print("📊 Response body: ${response.body}");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print("📦 Parsed data: $data");
+        print("👤 User data: ${data['user']}");
+        print(
+          "🆔 Role ID raw: ${data['user']?['role_id']} (type: ${data['user']?['role_id'].runtimeType})",
+        );
+
         // Simpan token & expired
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
@@ -25,15 +34,32 @@ class AuthService {
           'token_expired',
           DateTime.now().add(const Duration(days: 30)).toIso8601String(),
         );
-        // Simpan role_id secara eksplisit
+
+        // FIXED: Handle role_id type conversion dengan aman
         if (data['user'] != null && data['user']['role_id'] != null) {
-          await prefs.setInt('role_id', data['user']['role_id']);
+          dynamic roleId = data['user']['role_id'];
+          int parsedRoleId;
+
+          if (roleId is int) {
+            parsedRoleId = roleId;
+          } else if (roleId is String) {
+            parsedRoleId =
+                int.tryParse(roleId) ?? 2; // default ke user jika gagal parse
+          } else {
+            parsedRoleId = 2; // default ke user
+          }
+
+          await prefs.setInt('role_id', parsedRoleId);
+          print(
+            "🔧 Role ID disimpan: $parsedRoleId (Admin: ${parsedRoleId == 1}, User: ${parsedRoleId == 2})",
+          );
         }
         return data;
       } else {
         throw Exception(jsonDecode(response.body)['message'] ?? 'Login gagal');
       }
     } catch (e) {
+      print("🚨 AuthService login error: $e");
       throw Exception('Koneksi gagal: $e');
     }
   }
@@ -237,10 +263,17 @@ class AuthService {
     return prefs.getString('token');
   }
 
-  // Getter untuk mengambil role_id dari SharedPreferences
+  // FIXED: Getter yang lebih aman untuk mengambil role_id
   Future<int?> getRoleId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('role_id');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final roleId = prefs.getInt('role_id');
+      print("🔍 Role ID diambil: $roleId (tipe: ${roleId.runtimeType})");
+      return roleId;
+    } catch (e) {
+      print("🚨 Error mengambil role_id: $e");
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>> getStatistik() async {

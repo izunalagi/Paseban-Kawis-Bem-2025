@@ -122,6 +122,8 @@ class QuizProvider with ChangeNotifier {
         quizId: quizId,
         answers: answers,
       );
+
+      await fetchUserQuizScores();
     } catch (e) {
       errorSubmitQuiz = e.toString();
     }

@@ -4,7 +4,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/loading_widget.dart';
-import '../../widgets/custom_app_bar.dart';
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({super.key});

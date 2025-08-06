@@ -389,7 +389,7 @@ class _TambahEditPilihanPageState extends State<TambahEditPilihanPage> {
 
               // Toggle button untuk mengubah status jawaban benar
               if (widget.pilihan == null || !_hasCorrectAnswer) ...[
-                Container(
+                SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () {

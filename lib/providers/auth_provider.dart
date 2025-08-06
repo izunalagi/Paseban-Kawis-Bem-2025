@@ -13,18 +13,49 @@ class AuthProvider with ChangeNotifier {
   bool statistikLoading = false;
   String? statistikError;
 
-  Future<void> login(String email, String password) async {
-    final data = await AuthService().login(email, password);
-    // Cek verifikasi email, kecuali admin (role_id == 1)
-    if ((data['user']['role_id'] ?? 2) != 1 &&
-        data['user']['email_verified_at'] == null) {
-      throw Exception('EMAIL_NOT_VERIFIED');
+  // Helper function untuk konversi role_id dengan aman
+  int _parseRoleId(dynamic roleIdValue) {
+    if (roleIdValue == null) return 2; // default user
+
+    if (roleIdValue is int) {
+      return roleIdValue;
+    } else if (roleIdValue is String) {
+      return int.tryParse(roleIdValue) ?? 2;
     }
-    user = UserModel.fromJson(data['user']);
-    token = data['token'];
-    // roleId bisa diambil dari user jika ada
-    roleId = data['user']['role_id'] ?? 2;
-    notifyListeners();
+
+    return 2; // fallback ke user
+  }
+
+  Future<void> login(String email, String password) async {
+    try {
+      final data = await AuthService().login(email, password);
+
+      print("📥 Login response data: $data");
+      print("👤 User data: ${data['user']}");
+      print(
+        "🆔 Raw role_id: ${data['user']['role_id']} (type: ${data['user']['role_id'].runtimeType})",
+      );
+
+      // Parse role_id dengan aman
+      final parsedRoleId = _parseRoleId(data['user']['role_id']);
+      print("✅ Parsed role_id: $parsedRoleId");
+
+      // Cek verifikasi email, kecuali admin (role_id == 1)
+      if (parsedRoleId != 1 && data['user']['email_verified_at'] == null) {
+        print("⚠️ User belum terverifikasi, role_id: $parsedRoleId");
+        throw Exception('EMAIL_NOT_VERIFIED');
+      }
+
+      user = UserModel.fromJson(data['user']);
+      token = data['token'];
+      roleId = parsedRoleId;
+
+      print("🎯 Final roleId set: $roleId");
+      notifyListeners();
+    } catch (e) {
+      print("🚨 AuthProvider login error: $e");
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> register(
@@ -72,23 +103,35 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> tryAutoLogin() async {
-    if (await AuthService().isLoggedIn()) {
-      final userData = await AuthService().getUser();
-      if (userData != null) {
-        user = UserModel.fromJson(userData);
-        // Ambil token dan role_id dari SharedPreferences
-        token = await AuthService().getToken();
-        roleId = await AuthService().getRoleId() ?? userData['role_id'] ?? 2;
-        notifyListeners();
-        return true;
+    try {
+      if (await AuthService().isLoggedIn()) {
+        final userData = await AuthService().getUser();
+        if (userData != null) {
+          print("🔄 Auto login - userData: $userData");
+
+          user = UserModel.fromJson(userData);
+          token = await AuthService().getToken();
+
+          // Ambil role_id dari SharedPreferences dulu, fallback ke userData
+          final storedRoleId = await AuthService().getRoleId();
+          final userDataRoleId = _parseRoleId(userData['role_id']);
+
+          roleId = storedRoleId ?? userDataRoleId;
+
+          print("🎯 Auto login - Final roleId: $roleId");
+          notifyListeners();
+          return true;
+        }
       }
+      return false;
+    } catch (e) {
+      print("🚨 Auto login error: $e");
+      return false;
     }
-    return false;
   }
 
   Future<void> forgotPassword(String email) async {
-    final response = await AuthService().forgotPassword(email);
-    // Tidak perlu return apa-apa, error akan dilempar jika gagal
+    await AuthService().forgotPassword(email);
   }
 
   Future<void> resendRegisterOtp(String email) async {

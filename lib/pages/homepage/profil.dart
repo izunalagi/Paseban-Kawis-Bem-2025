@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
 import '../../widgets/loading_widget.dart';
 import '../../providers/auth_provider.dart';
 import 'package:another_flushbar/flushbar.dart';
@@ -22,6 +21,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final int _selectedIndex = 3; // Profil sekarang di indeks 3 (paling kanan)
   Map<String, dynamic>? _profile;
   bool _loadingProfile = true;
+  bool _showSyarat = false;
 
   @override
   void initState() {
@@ -420,16 +420,58 @@ class _ProfilePageState extends State<ProfilePage> {
                             subtitle: _profile?['telepon'] ?? '-',
                             showTrailing: false,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           _buildProfileTile(
                             icon: Icons.description,
-                            iconColor: AppColors.accent,
+                            iconColor: AppColors.dashboardPrimary,
                             title: 'Syarat dan Ketentuan',
                             subtitle:
                                 'Tekan untuk melihat syarat dan ketentuan',
                             onTap: () {
-                              // TODO: Navigate to terms page
+                              setState(() {
+                                _showSyarat = !_showSyarat;
+                              });
                             },
+                          ),
+                          Visibility(
+                            visible: _showSyarat,
+                            child: AnimatedSize(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: Container(
+                                margin: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 8,
+                                ),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'Syarat & Ketentuan Penggunaan Aplikasi:\n\n'
+                                  '1. Aplikasi ini dikembangkan oleh BEM Fasilkom Universitas Jember dalam rangka program PPK Ormawa untuk mendukung digitalisasi dan pelayanan di desa.\n\n'
+                                  '2. Aplikasi diberikan secara gratis kepada desa dan hanya boleh digunakan untuk keperluan administrasi, edukasi, dan pelayanan masyarakat desa.\n\n'
+                                  '3. Pengelolaan akun dan data pengguna menjadi tanggung jawab pihak desa.\n\n'
+                                  '4. Data yang diinput harus benar dan dapat dipertanggungjawabkan.\n\n'
+                                  '5. Dilarang menggunakan aplikasi untuk aktivitas yang melanggar hukum atau merugikan pihak lain.\n\n'
+                                  '6. BEM Fasilkom Universitas Jember tidak bertanggung jawab atas penyalahgunaan aplikasi di luar tujuan awal pengembangan.\n\n'
+                                  '7. Pengembangan dan pemeliharaan aplikasi dapat dilanjutkan oleh pihak desa atau kolaborator lain setelah serah terima.\n\n'
+                                  '8. Hak cipta aplikasi tetap dimiliki oleh pengembang, namun desa diberikan hak penuh untuk menggunakan dan mengembangkan lebih lanjut.\n\n'
+                                  '9. Segala bentuk kerjasama, pengembangan, atau distribusi ulang aplikasi harus sepengetahuan BEM Fasilkom Universitas Jember.\n\n'
+                                  'Terima kasih telah menggunakan aplikasi ini. Semoga dapat bermanfaat untuk kemajuan desa dan masyarakat.',
+                                  style: TextStyle(fontSize: 15),
+                                  textAlign: TextAlign.justify,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

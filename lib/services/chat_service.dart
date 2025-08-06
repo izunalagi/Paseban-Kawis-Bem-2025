@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/chat_model.dart';
 
 class ChatService {
-  final String baseUrl = "http://10.42.223.86:8000/api";
+  final String baseUrl = "https://pasebankawis.himatifunej.com/api";
 
   Future<ChatSession> startSession(String token) async {
     final response = await http.post(
@@ -13,7 +13,18 @@ class ChatService {
         'Content-Type': 'application/json',
       },
     );
-
+    print(response.statusCode);
+    print(response.body);
+    if (response.statusCode == 201) {
+      final data = json.decode(response.body);
+      return ChatSession.fromJson(data);
+    } else if (response.statusCode == 400) {
+      throw Exception('Bad request: ${json.decode(response.body)['message']}');
+    } else if (response.statusCode == 401) {
+      throw Exception('Unauthorized: ${json.decode(response.body)['message']}');
+    } else if (response.statusCode == 500) {
+      throw Exception('Server error: ${json.decode(response.body)['message']}');
+    }
     if (response.statusCode == 200) {
       return ChatSession.fromJson(json.decode(response.body));
     } else {

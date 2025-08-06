@@ -24,9 +24,9 @@ class ModulModel {
   });
 
   factory ModulModel.fromJson(Map<String, dynamic> json) => ModulModel(
-    id: json['id'],
+    id: _parseToInt(json['id']),
     judulModul: json['judul_modul'] ?? '',
-    categoryModulId: json['category_modul_id'] ?? 0,
+    categoryModulId: _parseToInt(json['category_modul_id']),
     namaKategori: json['category_modul']?['nama'] ?? json['nama_kategori'],
     linkVideo: json['link_video'] ?? '',
     pathPdf: json['path_pdf'],
@@ -39,6 +39,17 @@ class ModulModel {
         ? DateTime.parse(json['updated_at'])
         : null,
   );
+
+  // Helper method untuk konversi yang aman dari dynamic ke int
+  static int _parseToInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      return parsed ?? 0;
+    }
+    return 0;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

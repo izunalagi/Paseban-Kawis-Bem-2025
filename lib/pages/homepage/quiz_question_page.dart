@@ -9,7 +9,7 @@ import 'quiz_review_page.dart';
 class QuizQuestionPage extends StatefulWidget {
   final Map<String, dynamic> quiz;
 
-  const QuizQuestionPage({Key? key, required this.quiz}) : super(key: key);
+  const QuizQuestionPage({super.key, required this.quiz});
 
   @override
   State<QuizQuestionPage> createState() => _QuizQuestionPageState();

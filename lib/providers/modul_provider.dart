@@ -9,6 +9,18 @@ class ModulProvider with ChangeNotifier {
 
   final ModulService _service = ModulService();
 
+  // Helper method untuk konversi ID ke int dengan aman
+  int _parseId(dynamic id) {
+    if (id == null) throw Exception('ID tidak boleh null');
+    if (id is int) return id;
+    if (id is String) {
+      final parsed = int.tryParse(id);
+      if (parsed == null) throw Exception('ID tidak valid: $id');
+      return parsed;
+    }
+    throw Exception('Tipe ID tidak didukung: ${id.runtimeType}');
+  }
+
   Future<void> fetchModul() async {
     isLoading = true;
     error = null;
@@ -49,8 +61,9 @@ class ModulProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // FIXED: Accept dynamic id instead of int
   Future<void> editModul(
-    int id,
+    dynamic id, // Changed from int to dynamic
     Map<String, dynamic> data,
     String? pdfPath,
     String? fotoPath,
@@ -66,7 +79,8 @@ class ModulProvider with ChangeNotifier {
     notifyListeners();
     try {
       final updated = await _service.editModul(id, data, pdfPath, fotoPath);
-      final idx = modul.indexWhere((m) => m['id'] == id);
+      final parsedId = _parseId(id); // Parse for comparison
+      final idx = modul.indexWhere((m) => _parseId(m['id']) == parsedId);
       if (idx != -1) modul[idx] = updated;
     } catch (e) {
       error = e.toString();
@@ -78,7 +92,9 @@ class ModulProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> deleteModul(int id) async {
+  // FIXED: Accept dynamic id instead of int
+  Future<void> deleteModul(dynamic id) async {
+    // Changed from int to dynamic
     final roleId = await AuthService().getRoleId();
     if (roleId != 1) {
       throw Exception(
@@ -90,11 +106,32 @@ class ModulProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _service.deleteModul(id);
-      modul.removeWhere((m) => m['id'] == id);
+      final parsedId = _parseId(id); // Parse for comparison
+      modul.removeWhere((m) => _parseId(m['id']) == parsedId);
     } catch (e) {
       error = e.toString();
     }
     isLoading = false;
     notifyListeners();
+  }
+
+  // NEW: Method to record module access
+  Future<void> recordModuleAccess(dynamic modulId) async {
+    try {
+      await _service.recordModuleAccess(modulId);
+    } catch (e) {
+      // Log error but don't throw - this is not critical functionality
+      print('Error recording module access: $e');
+    }
+  }
+
+  // NEW: Method to get recently accessed modules
+  Future<List<dynamic>> getRecentlyAccessed() async {
+    try {
+      return await _service.getRecentlyAccessed();
+    } catch (e) {
+      print('Error loading recently accessed modules: $e');
+      return []; // Return empty list instead of throwing
+    }
   }
 }

@@ -160,7 +160,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                         ),
                         SizedBox(height: 12),
                         Text(
-                          'Masukkan email terdaftar untuk menerima kode verifikasi.\nKode verifikasi hanya berlaku selama 5 menit.',
+                          'Masukkan email terdaftar untuk menerima kode verifikasi.\nKode verifikasi akan dikirim melalui Email.',
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 14,

@@ -231,7 +231,7 @@ class _PeringkatPageState extends State<PeringkatPage> {
   }
 
   Widget _buildTopThree() {
-    if (leaderboard.length < 1) return const SizedBox();
+    if (leaderboard.isEmpty) return const SizedBox();
     final top = leaderboard.take(3).toList();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

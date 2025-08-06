@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserService {
-  static const String baseUrl = 'http://10.42.223.86:8000';
+  static const String baseUrl = 'https://pasebankawis.himatifunej.com';
 
   Future<List<dynamic>> fetchUserList() async {
     final prefs = await SharedPreferences.getInstance();

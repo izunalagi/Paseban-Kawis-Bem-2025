@@ -134,7 +134,7 @@ class _TambahEditQuizPageState extends State<TambahEditQuizPage> {
                                 image: NetworkImage(
                                   widget.quiz!['thumbnail'].startsWith('http')
                                       ? widget.quiz!['thumbnail']
-                                      : 'http://10.42.223.86:8000/${widget.quiz!['thumbnail']}',
+                                      : 'https://pasebankawis.himatifunej.com/${widget.quiz!['thumbnail']}',
                                 ),
                                 fit: BoxFit.cover,
                                 onError: (exception, stackTrace) {

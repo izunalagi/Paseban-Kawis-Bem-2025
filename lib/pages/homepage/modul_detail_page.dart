@@ -87,8 +87,7 @@ class _ModulDetailPageState extends State<ModulDetailPage> {
         }
 
         // Handle errors
-        if (_youtubeController!.value.hasError &&
-            _youtubeController!.value.errorCode != null) {
+        if (_youtubeController!.value.hasError) {
           setState(() {
             _hasError = true;
           });

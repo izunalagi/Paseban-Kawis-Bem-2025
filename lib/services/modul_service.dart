@@ -4,7 +4,19 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class ModulService {
-  static const String baseUrl = 'http://10.42.223.86:8000';
+  static const String baseUrl = 'https://pasebankawis.himatifunej.com';
+
+  // Helper method untuk konversi ID ke int dengan aman
+  int _parseId(dynamic id) {
+    if (id == null) throw Exception('ID tidak boleh null');
+    if (id is int) return id;
+    if (id is String) {
+      final parsed = int.tryParse(id);
+      if (parsed == null) throw Exception('ID tidak valid: $id');
+      return parsed;
+    }
+    throw Exception('Tipe ID tidak didukung: ${id.runtimeType}');
+  }
 
   Future<List<dynamic>> fetchModul() async {
     final token = await AuthService().getToken();
@@ -60,16 +72,19 @@ class ModulService {
     }
   }
 
+  // FIXED: Accept dynamic id and parse safely
   Future<Map<String, dynamic>> editModul(
-    int id,
+    dynamic id, // Changed from int to dynamic
     Map<String, dynamic> data,
     String? pdfPath,
     String? fotoPath,
   ) async {
     final token = await AuthService().getToken();
+    final parsedId = _parseId(id); // Safe parsing
+
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('$baseUrl/api/modul/$id'),
+      Uri.parse('$baseUrl/api/modul/$parsedId'),
     );
     request.headers['Authorization'] = 'Bearer $token';
     data.forEach((key, value) {
@@ -102,10 +117,14 @@ class ModulService {
     }
   }
 
-  Future<void> deleteModul(int id) async {
+  // FIXED: Accept dynamic id and parse safely
+  Future<void> deleteModul(dynamic id) async {
+    // Changed from int to dynamic
     final token = await AuthService().getToken();
+    final parsedId = _parseId(id); // Safe parsing
+
     final res = await http.delete(
-      Uri.parse('$baseUrl/api/modul/$id'),
+      Uri.parse('$baseUrl/api/modul/$parsedId'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (res.statusCode != 200) {
@@ -113,10 +132,14 @@ class ModulService {
     }
   }
 
-  Future<void> recordModuleAccess(int modulId) async {
+  // FIXED: Accept dynamic modulId and parse safely
+  Future<void> recordModuleAccess(dynamic modulId) async {
+    // Changed from int to dynamic
     final token = await AuthService().getToken();
+    final parsedId = _parseId(modulId); // Safe parsing
+
     final res = await http.post(
-      Uri.parse('$baseUrl/api/modul/$modulId/access'),
+      Uri.parse('$baseUrl/api/modul/$parsedId/access'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

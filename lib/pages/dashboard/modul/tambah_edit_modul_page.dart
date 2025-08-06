@@ -35,7 +35,9 @@ class _TambahEditModulPageState extends State<TambahEditModulPage> {
       _judulController.text = widget.modul!['judul_modul'] ?? '';
       _linkController.text = widget.modul!['link_video'] ?? '';
       _deskripsiController.text = widget.modul!['deskripsi_modul'] ?? '';
-      _selectedKategori = widget.modul!['category_modul_id'];
+      _selectedKategori = int.tryParse(
+        widget.modul!['category_modul_id'].toString(),
+      );
       _pdfName = widget.modul!['path_pdf']?.toString().split('/').last;
       _fotoName = widget.modul!['foto']?.toString().split('/').last;
       // _fotoPath = widget.modul!['foto'] != null

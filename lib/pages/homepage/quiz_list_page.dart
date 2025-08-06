@@ -6,7 +6,7 @@ import '../../utils/constants.dart';
 import 'quiz_detail_page.dart';
 
 class QuizListPage extends StatefulWidget {
-  const QuizListPage({Key? key}) : super(key: key);
+  const QuizListPage({super.key});
 
   @override
   State<QuizListPage> createState() => _QuizListPageState();
@@ -332,7 +332,7 @@ class _QuizListPageState extends State<QuizListPage> {
       if (thumbnail.startsWith('http')) {
         imageUrl = thumbnail;
       } else {
-        imageUrl = 'http://10.42.223.86:8000/$thumbnail';
+        imageUrl = 'https://pasebankawis.himatifunej.com/$thumbnail';
       }
     }
 

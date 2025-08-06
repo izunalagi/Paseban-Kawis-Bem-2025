@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class QuizService {
-  static const String baseUrl = 'http://10.42.223.86:8000';
+  static const String baseUrl = 'https://pasebankawis.himatifunej.com';
 
   // Get all quizzes (listQuiz method in PHP)
   Future<List<dynamic>> fetchQuizList() async {

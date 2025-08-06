@@ -14,7 +14,6 @@ import '../../services/quiz_service.dart';
 import 'quiz_list_page.dart';
 import 'quiz_detail_page.dart';
 import 'chatbot_page.dart';
-// import '../../widgets/custom__button_nav.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,6 +33,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _recentlyAccessed = [];
   List<dynamic> _quizList = [];
   bool _isQuizLoading = true;
+
+  // Helper method untuk konversi ID ke string dengan aman (untuk consistency)
+  String _parseIdToString(dynamic id) {
+    if (id == null) return '';
+    if (id is String) return id;
+    if (id is int) return id.toString();
+    return id.toString();
+  }
+
+  // Helper method untuk membandingkan ID dengan aman
+  bool _compareIds(dynamic id1, dynamic id2) {
+    if (id1 == null || id2 == null) return false;
+    return _parseIdToString(id1) == _parseIdToString(id2);
+  }
 
   @override
   void initState() {
@@ -136,20 +149,55 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _loadRecentlyAccessedModules() async {
     try {
-      // Ambil data modul yang terakhir diakses dari SharedPreferences
+      print('DEBUG: Loading recently accessed modules...');
+      print('DEBUG: _modulList length: ${_modulList.length}');
+
+      // Coba ambil dari server terlebih dahulu
+      final modulService = ModulService();
+      try {
+        final serverRecentlyAccessed = await modulService.getRecentlyAccessed();
+        print('DEBUG: Server recently accessed: $serverRecentlyAccessed');
+
+        if (serverRecentlyAccessed.isNotEmpty) {
+          setState(() {
+            _recentlyAccessed = serverRecentlyAccessed
+                .cast<Map<String, dynamic>>();
+          });
+          print('DEBUG: Successfully loaded from server');
+          return;
+        }
+      } catch (e) {
+        print('Error loading from server: $e');
+        print('Server error, fallback to local: $e');
+      }
+
+      // Fallback ke SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final recentlyAccessedString = prefs.getString(
         'recently_accessed_modules',
       );
+      print('DEBUG: Local storage string: $recentlyAccessedString');
 
       if (recentlyAccessedString != null) {
         final recentlyAccessedIds =
             jsonDecode(recentlyAccessedString) as List<dynamic>;
+        print('DEBUG: Recently accessed IDs: $recentlyAccessedIds');
 
-        // Filter modul berdasarkan ID yang tersimpan
+        // Filter modul berdasarkan ID yang tersimpan dengan perbandingan yang aman
         final filteredModul = _modulList.where((modul) {
-          return recentlyAccessedIds.contains(modul['id']);
+          final modulId = modul['id'];
+          bool found = recentlyAccessedIds.any(
+            (savedId) => _compareIds(modulId, savedId),
+          );
+          if (found) {
+            print(
+              'DEBUG: Found matching module: ${modul['judul_modul']} (ID: $modulId)',
+            );
+          }
+          return found;
         }).toList();
+
+        print('DEBUG: Filtered modules count: ${filteredModul.length}');
 
         setState(() {
           _recentlyAccessed = filteredModul.cast<Map<String, dynamic>>();
@@ -157,6 +205,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       } else {
         // Jika belum ada data, ambil 3 modul pertama sebagai default
         if (_modulList.isNotEmpty) {
+          print('DEBUG: Using default modules');
           setState(() {
             _recentlyAccessed = _modulList
                 .take(3)
@@ -179,9 +228,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Method untuk menambah modul ke daftar terakhir diakses
+  // Method untuk menambah modul ke daftar terakhir diakses dengan ID handling yang aman
   Future<void> _addToRecentlyAccessed(Map<String, dynamic> modulData) async {
     try {
+      // Record access ke server
+      final modulService = ModulService();
+      try {
+        await modulService.recordModuleAccess(modulData['id']);
+        print('DEBUG: Successfully recorded module access to server');
+      } catch (e) {
+        print('DEBUG: Failed to record to server, using local storage: $e');
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final recentlyAccessedString = prefs.getString(
         'recently_accessed_modules',
@@ -193,10 +251,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             jsonDecode(recentlyAccessedString) as List<dynamic>;
       }
 
-      final modulId = modulData['id'];
+      final modulId = _parseIdToString(modulData['id']);
+      print(
+        'DEBUG: Adding module to recent: ${modulData['judul_modul']} (ID: $modulId)',
+      );
 
       // Hapus modul dari list jika sudah ada (untuk memindahkan ke posisi teratas)
-      recentlyAccessedIds.remove(modulId);
+      recentlyAccessedIds.removeWhere(
+        (savedId) => _compareIds(savedId, modulId),
+      );
 
       // Tambahkan modul ke posisi teratas
       recentlyAccessedIds.insert(0, modulId);
@@ -205,6 +268,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (recentlyAccessedIds.length > 5) {
         recentlyAccessedIds = recentlyAccessedIds.take(5).toList();
       }
+
+      print('DEBUG: Updated recent IDs: $recentlyAccessedIds');
 
       // Simpan kembali ke SharedPreferences
       await prefs.setString(
@@ -536,7 +601,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (imageAsset.startsWith('http')) {
         imageUrl = imageAsset;
       } else {
-        imageUrl = 'http://10.42.223.86:8000/$imageAsset';
+        imageUrl = 'https://pasebankawis.himatifunej.com/$imageAsset';
       }
     }
 
@@ -760,7 +825,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (imageAsset.startsWith('http')) {
         imageUrl = imageAsset;
       } else {
-        imageUrl = 'http://10.42.223.86:8000/$imageAsset';
+        imageUrl = 'https://pasebankawis.himatifunej.com/$imageAsset';
       }
     }
 
@@ -988,7 +1053,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (thumbnail.startsWith('http')) {
         imageUrl = thumbnail;
       } else {
-        imageUrl = 'http://10.42.223.86:8000/$thumbnail';
+        imageUrl = 'https://pasebankawis.himatifunej.com/$thumbnail';
       }
     }
 
@@ -1196,7 +1261,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ],
                   ),
                 )
-              : Container(
+              : SizedBox(
                   height: 180, // Increased height to accommodate content
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
@@ -1262,7 +1327,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 16),
           if (_kategoriList.isNotEmpty) ...[
-            Container(
+            SizedBox(
               height: 45,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
