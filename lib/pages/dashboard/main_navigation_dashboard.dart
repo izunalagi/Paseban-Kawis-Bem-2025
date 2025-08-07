@@ -43,16 +43,6 @@ class _MainNavigationDashboardState extends State<MainNavigationDashboard> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: Colors.white,
-                ),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-            ],
           ),
           body: _pages[_selectedIndex],
           bottomNavigationBar: CustomBottomNavDashboard(

@@ -19,7 +19,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: backgroundColor ?? const Color(0xFF043461), // Warna asli
+      backgroundColor: backgroundColor ?? const Color(0xFF043461),
       elevation: 0,
       automaticallyImplyLeading: showBackButton,
       leading: showBackButton
@@ -36,14 +36,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      actions: showBackButton
-          ? null
-          : [
-              IconButton(
-                icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () {},
-              ),
-            ],
     );
   }
 }

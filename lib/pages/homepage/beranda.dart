@@ -120,11 +120,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _loadRecentlyAccessedModules();
     } catch (e) {
       setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
-      }
     }
   }
 
@@ -139,11 +134,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       });
     } catch (e) {
       setState(() => _isQuizLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat daftar kuis: $e')));
-      }
     }
   }
 

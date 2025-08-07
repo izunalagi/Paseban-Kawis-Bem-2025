@@ -19,6 +19,7 @@ class _PeringkatPageState extends State<PeringkatPage> {
   List<dynamic> quizList = [];
   bool _isLoading = true;
   bool _isLoadingQuiz = true;
+  bool _isDropdownOpen = false;
   String? _error;
 
   // Helper function to get full photo URL
@@ -37,6 +38,13 @@ class _PeringkatPageState extends State<PeringkatPage> {
 
     // Otherwise, assume it's a relative path and add base URL
     return '${ModulService.baseUrl}/$photoPath';
+  }
+
+  // Helper function to truncate user name
+  String _truncateUserName(String? name, int maxLength) {
+    if (name == null || name.isEmpty) return '-';
+    if (name.length <= maxLength) return name;
+    return '${name.substring(0, maxLength)}...';
   }
 
   @override
@@ -142,42 +150,195 @@ class _PeringkatPageState extends State<PeringkatPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        DropdownButtonFormField<String>(
-                          value: selectedQuizTitle == 'Pilih Kuis'
-                              ? null
-                              : selectedQuizTitle,
-                          hint: const Text('Pilih Kuis'),
-                          decoration: InputDecoration(
-                            labelText: 'Pilih Kuis',
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          items: quizList
-                              .map(
-                                (quiz) => DropdownMenuItem(
-                                  value: quiz['title'] as String,
-                                  child: Text(quiz['title'] as String),
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isDropdownOpen = !_isDropdownOpen;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
                                 ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedQuizTitle = value!;
-                              selectedQuizId =
-                                  quizList.firstWhere(
-                                        (quiz) => quiz['title'] == value,
-                                      )['id']
-                                      as int;
-                              _fetchLeaderboard();
-                            });
-                          },
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.primary.withOpacity(0.05),
+                                      AppColors.accent.withOpacity(0.05),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: _isDropdownOpen
+                                        ? AppColors.primary.withOpacity(0.4)
+                                        : AppColors.primary.withOpacity(0.2),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(
+                                        0.08,
+                                      ),
+                                      blurRadius: _isDropdownOpen ? 12 : 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selectedQuizTitle == 'Pilih Kuis'
+                                          ? Icons.quiz_outlined
+                                          : Icons.quiz,
+                                      color: selectedQuizTitle == 'Pilih Kuis'
+                                          ? AppColors.primary.withOpacity(0.7)
+                                          : AppColors.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        selectedQuizTitle,
+                                        style: TextStyle(
+                                          color:
+                                              selectedQuizTitle == 'Pilih Kuis'
+                                              ? AppColors.textSecondary
+                                              : AppColors.primary,
+                                          fontSize: 16,
+                                          fontWeight:
+                                              selectedQuizTitle == 'Pilih Kuis'
+                                              ? FontWeight.w500
+                                              : FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    AnimatedRotation(
+                                      turns: _isDropdownOpen ? 0.5 : 0,
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        color: AppColors.primary,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              height: _isDropdownOpen
+                                  ? (quizList.length * 56.0).clamp(0, 200)
+                                  : 0,
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.primary.withOpacity(0.15),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.shadowMedium.withOpacity(
+                                        0.15,
+                                      ),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    itemCount: quizList.length,
+                                    itemBuilder: (context, index) {
+                                      final quiz = quizList[index];
+                                      final isSelected =
+                                          selectedQuizTitle == quiz['title'];
+                                      return Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              selectedQuizTitle =
+                                                  quiz['title'] as String;
+                                              selectedQuizId =
+                                                  quiz['id'] as int;
+                                              _isDropdownOpen = false;
+                                              _fetchLeaderboard();
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? AppColors.primary
+                                                        .withOpacity(0.08)
+                                                  : Colors.transparent,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 6,
+                                                  height: 6,
+                                                  decoration: BoxDecoration(
+                                                    color: isSelected
+                                                        ? AppColors.primary
+                                                        : AppColors.accent,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(
+                                                    quiz['title'] as String,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: isSelected
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w500,
+                                                      color: isSelected
+                                                          ? AppColors.primary
+                                                          : AppColors
+                                                                .textPrimary,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isSelected)
+                                                  Icon(
+                                                    Icons.check_circle_rounded,
+                                                    color: AppColors.primary,
+                                                    size: 18,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         if (_error != null)
@@ -310,16 +471,19 @@ class _PeringkatPageState extends State<PeringkatPage> {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(
-                user['user_name'] ?? '-',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontSize: i == 0 ? 16 : 14,
+              Container(
+                width: i == 0 ? 80 : (i == 1 ? 75 : 70),
+                child: Text(
+                  _truncateUserName(user['user_name'], i == 0 ? 10 : 8),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: i == 0 ? 16 : 14,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Text(
@@ -427,7 +591,7 @@ class _PeringkatPageState extends State<PeringkatPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user['user_name'] ?? '-',
+                    _truncateUserName(user['user_name'], 15),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
