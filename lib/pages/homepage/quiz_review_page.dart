@@ -72,7 +72,7 @@ class QuizReviewPage extends StatelessWidget {
                 // Quiz Title
                 if (quiz != null) ...[
                   Text(
-                    quiz!['judul'] ?? 'Quiz Review',
+                    quiz!['title'] ?? quiz!['judul'] ?? 'Quiz Review',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -207,6 +207,7 @@ class QuizReviewPage extends StatelessWidget {
                 );
                 final correctOptionId = correctOption['id']?.toString();
                 final isCorrect = userSelected == correctOptionId;
+                final isAnswered = userSelected != null;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 24),
@@ -217,9 +218,7 @@ class QuizReviewPage extends StatelessWidget {
                     border: Border.all(
                       color: isCorrect
                           ? Colors.green[200]!
-                          : (userSelected != null
-                                ? Colors.red[200]!
-                                : Colors.grey[300]!),
+                          : (isAnswered ? Colors.red[200]! : Colors.grey[300]!),
                       width: 2,
                     ),
                     boxShadow: [
@@ -263,7 +262,7 @@ class QuizReviewPage extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: isCorrect
                                   ? Colors.green[100]
-                                  : (userSelected != null
+                                  : (isAnswered
                                         ? Colors.red[100]
                                         : Colors.grey[100]),
                               borderRadius: BorderRadius.circular(20),
@@ -274,13 +273,13 @@ class QuizReviewPage extends StatelessWidget {
                                 Icon(
                                   isCorrect
                                       ? Icons.check_circle
-                                      : (userSelected != null
+                                      : (isAnswered
                                             ? Icons.cancel
                                             : Icons.help_outline),
                                   size: 16,
                                   color: isCorrect
                                       ? Colors.green
-                                      : (userSelected != null
+                                      : (isAnswered
                                             ? Colors.red
                                             : Colors.grey[600]),
                                 ),
@@ -288,7 +287,7 @@ class QuizReviewPage extends StatelessWidget {
                                 Text(
                                   isCorrect
                                       ? 'Benar'
-                                      : (userSelected != null
+                                      : (isAnswered
                                             ? 'Salah'
                                             : 'Tidak Dijawab'),
                                   style: TextStyle(
@@ -296,7 +295,7 @@ class QuizReviewPage extends StatelessWidget {
                                     fontWeight: FontWeight.w600,
                                     color: isCorrect
                                         ? Colors.green
-                                        : (userSelected != null
+                                        : (isAnswered
                                               ? Colors.red
                                               : Colors.grey[600]),
                                   ),
@@ -329,22 +328,30 @@ class QuizReviewPage extends StatelessWidget {
                         Color? bgColor;
                         Color? borderColor;
                         Color? textColor = Colors.black87;
+                        IconData? trailingIcon;
+                        Color? trailingIconColor;
 
                         if (isCorrectOption && isUserSelection) {
                           // User selected correct answer
                           bgColor = Colors.green[100];
                           borderColor = Colors.green;
                           textColor = Colors.green[900];
+                          trailingIcon = Icons.check_circle;
+                          trailingIconColor = Colors.green;
                         } else if (isCorrectOption) {
                           // Correct answer (not selected by user)
                           bgColor = Colors.green[50];
                           borderColor = Colors.green;
                           textColor = Colors.green[900];
+                          trailingIcon = Icons.check_circle;
+                          trailingIconColor = Colors.green;
                         } else if (isUserSelection) {
                           // User selected wrong answer
                           bgColor = Colors.red[100];
                           borderColor = Colors.red;
                           textColor = Colors.red[900];
+                          trailingIcon = Icons.cancel;
+                          trailingIconColor = Colors.red;
                         } else {
                           // Other options
                           bgColor = Colors.white;
@@ -386,32 +393,54 @@ class QuizReviewPage extends StatelessWidget {
                               ),
                               const SizedBox(width: 14),
                               Expanded(
-                                child: Text(
-                                  opt['option_text'] ?? '',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: textColor,
-                                    fontWeight: isCorrectOption
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      opt['option_text'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: textColor,
+                                        fontWeight:
+                                            (isCorrectOption || isUserSelection)
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    // Show status text
+                                    if (isUserSelection &&
+                                        !isCorrectOption) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Jawaban Anda',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.red[600],
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                    if (isCorrectOption) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Jawaban Benar',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.green[600],
+                                          fontStyle: FontStyle.italic,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              if (isCorrectOption)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 8.0),
+                              if (trailingIcon != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
                                   child: Icon(
-                                    Icons.check_circle,
-                                    color: Colors.green,
-                                    size: 20,
-                                  ),
-                                ),
-                              if (isUserSelection && !isCorrectOption)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 8.0),
-                                  child: Icon(
-                                    Icons.cancel,
-                                    color: Colors.red,
+                                    trailingIcon,
+                                    color: trailingIconColor,
                                     size: 20,
                                   ),
                                 ),
@@ -419,6 +448,53 @@ class QuizReviewPage extends StatelessWidget {
                           ),
                         );
                       }),
+
+                      // Show explanation if user answered wrong or didn't answer
+                      if (!isCorrect && correctOption.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.lightbulb_outline,
+                                color: Colors.blue[700],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Jawaban yang benar:',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.blue[800],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${correctOption['option_label']}. ${correctOption['option_text']}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.blue[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );

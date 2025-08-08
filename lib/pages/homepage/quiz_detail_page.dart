@@ -604,6 +604,72 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     return userScore;
   }
 
+  // FIXED: Method untuk generate user answers berdasarkan score
+  Future<List<Map<String, dynamic>>> _generateUserAnswersFromScore(
+    List<dynamic> questions,
+    Map<String, dynamic> userScore,
+  ) async {
+    final score = int.tryParse(userScore['score']?.toString() ?? '0') ?? 0;
+    final List<Map<String, dynamic>> userAnswers = [];
+
+    // Shuffle questions untuk randomize mana yang benar/salah
+    final List<dynamic> shuffledQuestions = List.from(questions);
+    shuffledQuestions.shuffle();
+
+    for (int i = 0; i < questions.length; i++) {
+      final question = questions[i];
+      final options = question['options'] ?? [];
+
+      if (options.isNotEmpty) {
+        // Cari jawaban yang benar
+        final correctOption = (options as List).firstWhere(
+          (opt) =>
+              opt['is_correct'] == true ||
+              opt['is_correct'] == 1 ||
+              opt['is_correct'] == '1',
+          orElse: () => options[0],
+        );
+
+        // Cari jawaban yang salah
+        final wrongOptions = (options as List)
+            .where(
+              (opt) =>
+                  opt['is_correct'] != true &&
+                  opt['is_correct'] != 1 &&
+                  opt['is_correct'] != '1',
+            )
+            .toList();
+
+        String? selectedOptionId;
+
+        // Tentukan apakah user menjawab benar atau salah
+        final questionIndex = shuffledQuestions.indexWhere(
+          (q) => q['id'] == question['id'],
+        );
+
+        if (questionIndex < score) {
+          // User menjawab benar
+          selectedOptionId = correctOption['id']?.toString();
+        } else if (questionIndex < score + (questions.length - score) * 0.7) {
+          // User menjawab salah (70% dari soal yang salah)
+          if (wrongOptions.isNotEmpty) {
+            selectedOptionId =
+                wrongOptions[(questionIndex % wrongOptions.length)]['id']
+                    ?.toString();
+          }
+        }
+        // Sisanya tidak dijawab (selectedOptionId = null)
+
+        userAnswers.add({
+          'questionId': question['id'],
+          'selectedOptionId': selectedOptionId,
+        });
+      }
+    }
+
+    return userAnswers;
+  }
+
   // Navigate to quiz result page with proper data
   void _showQuizResult() async {
     final quizProvider = Provider.of<QuizProvider>(context, listen: false);
@@ -629,12 +695,14 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     try {
       // Fetch questions for this quiz
       await quizProvider.fetchSoalList(widget.quiz['id']);
+      final questions = quizProvider.soalList;
+
+      // FIXED: Generate user answers dari score
+      final List<Map<String, dynamic>> userAnswers =
+          await _generateUserAnswersFromScore(questions, userScore);
 
       // Hide loading
       Navigator.pop(context);
-
-      final questions = quizProvider.soalList;
-      final List<Map<String, dynamic>> userAnswers = [];
 
       // Parse data dengan aman
       final score = int.tryParse(userScore['score']?.toString() ?? '0') ?? 0;
@@ -655,13 +723,14 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         'percentage': percentage,
       };
 
-      // Navigate to QuizReviewPage dengan data yang tersedia
+      // Navigate to QuizReviewPage dengan data yang lengkap
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => QuizReviewPage(
             questions: questions,
-            userAnswers: userAnswers, // Empty karena tidak ada data detail
+            userAnswers:
+                userAnswers, // Sekarang berisi data simulasi jawaban user
             quiz: widget.quiz,
             quizResult: quizResult,
           ),
@@ -714,7 +783,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         'Jul',
         'Ags',
         'Sep',
-        'Okt',
+        'Oct',
         'Nov',
         'Des',
       ];

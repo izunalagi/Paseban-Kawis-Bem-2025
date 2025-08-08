@@ -20,18 +20,36 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   late int _selectedIndex;
-  final List<Widget> _pages = [
-    const HomePage(),
-    const PeringkatPage(),
-    const ChatbotPage(),
-    const ProfilePage(),
-  ];
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex ?? 0;
     print('DEBUG: MainNavigation initialized with index: $_selectedIndex');
+  }
+
+  // Method untuk handle request navigasi dari child widgets
+  void _handleNavigationRequest(int index) {
+    print('DEBUG: Navigation requested to index: $index');
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  // Method untuk get page berdasarkan index
+  Widget _getCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return HomePage(onNavigationRequested: _handleNavigationRequest);
+      case 1:
+        return const PeringkatPage();
+      case 2:
+        return const ChatbotPage();
+      case 3:
+        return const ProfilePage();
+      default:
+        return HomePage(onNavigationRequested: _handleNavigationRequest);
+    }
   }
 
   @override
@@ -45,11 +63,11 @@ class _MainNavigationState extends State<MainNavigation> {
         onWillPop: () async => false,
         child: Scaffold(
           backgroundColor: AppColors.backgroundLight,
-          body: _pages[_selectedIndex],
+          body: _getCurrentPage(),
           bottomNavigationBar: CustomBottomNav(
             currentIndex: _selectedIndex,
             onTap: (index) {
-              print('DEBUG: Navigation tapped - Index: $index');
+              print('DEBUG: Bottom nav tapped - Index: $index');
               print('DEBUG: Current selected index: $_selectedIndex');
               setState(() {
                 _selectedIndex = index;

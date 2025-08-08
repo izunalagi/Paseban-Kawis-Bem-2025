@@ -502,7 +502,7 @@ class _PeringkatPageState extends State<PeringkatPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${user['percentage'] ?? 0}%',
+                  '${double.tryParse(user['percentage'].toString())?.toStringAsFixed(0) ?? '0'}%',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,

@@ -16,7 +16,8 @@ import 'quiz_detail_page.dart';
 import 'chatbot_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final Function(int)? onNavigationRequested;
+  const HomePage({super.key, this.onNavigationRequested});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -347,12 +348,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 borderRadius: BorderRadius.circular(12),
                                 onTap: () {
                                   // Navigate to chatbot page
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ChatbotPage(),
-                                    ),
-                                  );
+                                  if (widget.onNavigationRequested != null) {
+                                    widget.onNavigationRequested!(
+                                      2,
+                                    ); // Index 2 untuk ChatBot
+                                  }
                                 },
                                 child: Row(
                                   children: [
@@ -630,7 +630,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           children: [
             // Image section
             Container(
-              height: 90, // Reduced height
+              height: 80, // Reduced height
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.only(
@@ -751,7 +751,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             // Content
             Padding(
-              padding: const EdgeInsets.all(10), // Reduced padding
+              padding: const EdgeInsets.all(8), // Reduced padding
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -759,25 +759,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12, // Reduced font size
+                      fontSize: 11, // Reduced font size
                       color: AppColors.textPrimary,
                       height: 1.1,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4), // Reduced spacing
+                  const SizedBox(height: 3), // Reduced spacing
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 10, // Reduced font size
+                      fontSize: 9, // Reduced font size
                       color: AppColors.textSecondary,
                       height: 1.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8), // Reduced spacing
+                  const SizedBox(height: 6), // Reduced spacing
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -1448,7 +1448,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.75, // Adjusted aspect ratio to prevent overflow
+        childAspectRatio: 0.8, // Adjusted aspect ratio to prevent overflow
       ),
       itemCount: filteredModul.length,
       itemBuilder: (context, index) {

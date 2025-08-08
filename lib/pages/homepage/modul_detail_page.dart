@@ -415,7 +415,7 @@ class _ModulDetailPageState extends State<ModulDetailPage>
             child: Row(
               children: [
                 Expanded(
-                  flex: 2,
+                  flex: 3, // Sebelumnya 2
                   child: ElevatedButton.icon(
                     onPressed: _isVideoAvailable
                         ? _launchVideoInExternalApp
@@ -439,6 +439,7 @@ class _ModulDetailPageState extends State<ModulDetailPage>
                 ),
                 const SizedBox(width: 12),
                 Expanded(
+                  flex: 2, // Sebelumnya 1, sekarang 2
                   child: ElevatedButton.icon(
                     onPressed: _isVideoAvailable ? _toggleVideoPlayback : null,
                     icon: Icon(
@@ -464,7 +465,6 @@ class _ModulDetailPageState extends State<ModulDetailPage>
               ],
             ),
           ),
-
           const SizedBox(height: 8),
 
           // Content
