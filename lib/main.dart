@@ -10,17 +10,9 @@ import 'providers/auth_provider.dart';
 import 'pages/autentikasi/reset_password._page.dart';
 import 'pages/dashboard/main_navigation_dashboard.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Set preferred orientations untuk mendukung fullscreen video
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
-
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
